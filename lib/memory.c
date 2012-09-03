@@ -25,8 +25,11 @@
 #include "log.h"
 #include "memory.h"
 
+#ifdef FOX_RIP_DEBUG
 void alloc_inc (int);
 void alloc_dec (int);
+#endif /* FOX_RIP_DEBUG */
+
 
 struct message mstr [] =
 {
@@ -38,6 +41,8 @@ struct message mstr [] =
   { 0, NULL },
 };
 
+
+#ifdef FOX_RIP_DEBUG
 /* Fatal memory allocation error occured. */
 static void
 zerror (const char *fname, int type, size_t size)
@@ -46,6 +51,7 @@ zerror (const char *fname, int type, size_t size)
 	   fname, lookup (mstr, type), (int) size);
   exit (1);
 }
+#endif /* FOX_RIP_DEBUG */
 
 /* Memory allocation. */
 void *
@@ -54,12 +60,12 @@ zmalloc (int type, size_t size)
   void *memory;
 
   memory = malloc (size);
-
+#ifdef FOX_RIP_DEBUG
   if (memory == NULL)
     zerror ("malloc", type, size);
 
   alloc_inc (type);
-
+#endif /* FOX_RIP_DEBUG */
   return memory;
 }
 
@@ -70,11 +76,12 @@ zcalloc (int type, size_t size)
   void *memory;
 
   memory = calloc (1, size);
-
+#ifdef FOX_RIP_DEBUG
   if (memory == NULL)
     zerror ("calloc", type, size);
 
   alloc_inc (type);
+#endif /* FOX_RIP_DEBUG */
 
   return memory;
 }
@@ -86,8 +93,10 @@ zrealloc (int type, void *ptr, size_t size)
   void *memory;
 
   memory = realloc (ptr, size);
+#ifdef FOX_RIP_DEBUG
   if (memory == NULL)
     zerror ("realloc", type, size);
+#endif /* FOX_RIP_DEBUG */
   return memory;
 }
 
@@ -95,7 +104,9 @@ zrealloc (int type, void *ptr, size_t size)
 void
 zfree (int type, void *ptr)
 {
+#ifdef FOX_RIP_DEBUG
   alloc_dec (type);
+#endif /* FOX_RIP_DEBUG */
   free (ptr);
 }
 
@@ -106,9 +117,11 @@ zstrdup (int type, char *str)
   void *dup;
 
   dup = strdup (str);
+#ifdef FOX_RIP_DEBUG
   if (dup == NULL)
     zerror ("strdup", type, strlen (str));
   alloc_inc (type);
+#endif /* FOX_RIP_DEBUG */
   return dup;
 }
 
@@ -129,7 +142,9 @@ struct
 void
 mtype_log (char *func, void *memory, const char *file, int line, int type)
 {
+#ifdef FOX_RIP_DEBUG
   zlog_info ("%s: %s %p %s %d", func, lookup (mstr, type), memory, file, line);
+#endif /* FOX_RIP_DEBUG */
 }
 
 void *
@@ -207,6 +222,7 @@ struct
 } mstat [MTYPE_MAX];
 #endif /* MTPYE_LOG */
 
+#ifdef FOX_RIP_DEBUG
 /* Increment allocation counter. */
 void
 alloc_inc (int type)
@@ -220,6 +236,9 @@ alloc_dec (int type)
 {
   mstat[type].alloc--;
 }
+#endif /* FOX_RIP_DEBUG */
+
+#ifdef FOX_CMD_SUPPORT
 
 /* Looking up memory status from vty interface. */
 #include "vector.h"
@@ -471,10 +490,12 @@ DEFUN (show_memory_ospf6,
   show_memory_vty (vty, memory_list_ospf6);
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 void
 memory_init ()
 {
+#ifdef FOX_CMD_SUPPORT
   install_element (VIEW_NODE, &show_memory_cmd);
   install_element (VIEW_NODE, &show_memory_all_cmd);
   install_element (VIEW_NODE, &show_memory_lib_cmd);
@@ -490,4 +511,5 @@ memory_init ()
   install_element (ENABLE_NODE, &show_memory_bgp_cmd);
   install_element (ENABLE_NODE, &show_memory_ospf_cmd);
   install_element (ENABLE_NODE, &show_memory_ospf6_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }

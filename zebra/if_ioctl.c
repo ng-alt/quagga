@@ -50,7 +50,9 @@ interface_list_ioctl ()
   sock = socket (AF_INET, SOCK_DGRAM, 0);
   if (sock < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't make AF_INET socket stream: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -79,7 +81,9 @@ interface_list_ioctl ()
 
       if (ret < 0) 
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_warn ("SIOCGIFCONF: %s", strerror(errno));
+#endif /* FOX_RIP_DEBUG */
 	  goto end;
 	}
       /* Repeatedly get info til buffer fails to grow. */
@@ -213,7 +217,9 @@ if_getaddrs ()
   ret = getifaddrs (&ifap); 
   if (ret != 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_err ("getifaddrs(): %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -222,8 +228,10 @@ if_getaddrs ()
       ifp = if_lookup_by_name (ifap->ifa_name);
       if (ifp == NULL)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_err ("if_getaddrs(): Can't lookup interface %s\n",
 		    ifap->ifa_name);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
 
@@ -320,7 +328,9 @@ if_get_addr (struct interface *ifp)
     {
       if (errno != EADDRNOTAVAIL)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_warn ("SIOCGIFADDR fail: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	  return ret;
 	}
       return 0;
@@ -333,7 +343,9 @@ if_get_addr (struct interface *ifp)
     {
       if (errno != EADDRNOTAVAIL) 
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_warn ("SIOCGIFNETMASK fail: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	  return ret;
 	}
       return 0;
@@ -355,7 +367,9 @@ if_get_addr (struct interface *ifp)
 	{
 	  if (errno != EADDRNOTAVAIL) 
 	    {
+#ifdef FOX_RIP_DEBUG
 	      zlog_warn ("SIOCGIFDSTADDR fail: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	      return ret;
 	    }
 	  return 0;
@@ -370,7 +384,9 @@ if_get_addr (struct interface *ifp)
 	{
 	  if (errno != EADDRNOTAVAIL) 
 	    {
+#ifdef FOX_RIP_DEBUG
 	      zlog_warn ("SIOCGIFBRDADDR fail: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	      return ret;
 	    }
 	  return 0;

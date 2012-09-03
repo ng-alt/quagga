@@ -220,6 +220,7 @@ distribute_list_unset (char *ifname, enum distribute_type type,
   return 1;
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* Set access-list name to the distribute list. */
 struct distribute *
 distribute_list_prefix_set (char *ifname, enum distribute_type type,
@@ -359,6 +360,7 @@ DEFUN (no_distribute_list_all,
     }
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 DEFUN (distribute_list,
        distribute_list_cmd,
@@ -421,6 +423,7 @@ DEFUN (no_districute_list, no_distribute_list_cmd,
   return CMD_SUCCESS;
 }       
 
+#ifdef FOX_CMD_SUPPORT
 DEFUN (districute_list_prefix_all,
        distribute_list_prefix_all_cmd,
        "distribute-list prefix WORD (in|out)",
@@ -548,6 +551,7 @@ DEFUN (no_districute_list_prefix, no_distribute_list_prefix_cmd,
     }
   return CMD_SUCCESS;
 }       
+#endif /* FOX_CMD_SUPPORT */
 
 int
 config_show_distribute (struct vty *vty)
@@ -695,15 +699,18 @@ distribute_list_init (int node)
 {
   disthash = hash_create (distribute_hash_make, distribute_cmp);
 
+#ifdef FOX_CMD_SUPPORT
   install_element (node, &distribute_list_all_cmd);
   install_element (node, &no_distribute_list_all_cmd);
+#endif /* FOX_CMD_SUPPORT */
 
   install_element (node, &distribute_list_cmd);
   install_element (node, &no_distribute_list_cmd);
-
+#ifdef FOX_CMD_SUPPORT
   install_element (node, &distribute_list_prefix_all_cmd);
   install_element (node, &no_distribute_list_prefix_all_cmd);
 
   install_element (node, &distribute_list_prefix_cmd);
   install_element (node, &no_distribute_list_prefix_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }

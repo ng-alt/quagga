@@ -90,9 +90,10 @@ zclient_init (struct zclient *zclient, int redist_default)
   zclient->default_information = 0;
 
   /* Schedule first zclient connection. */
+#ifdef FOX_RIP_DEBUG
   if (zclient_debug)
     zlog_info ("zclient start scheduled");
-
+#endif /* FOX_RIP_DEBUG */
   zclient_event (ZCLIENT_SCHEDULE, zclient);
 }
 
@@ -101,8 +102,9 @@ void
 zclient_stop (struct zclient *zclient)
 {
   if (zclient_debug)
+#ifdef FOX_RIP_DEBUG
     zlog_info ("zclient stopped");
-
+#endif /* FOX_RIP_DEBUG */
   /* Stop threads. */
   if (zclient->t_read)
     {
@@ -162,7 +164,7 @@ zclient_socket ()
     }
   return sock;
 }
-
+#ifdef FOX_SUPPORT
 /* For sockaddr_un. */
 #include <sys/un.h>
 
@@ -195,7 +197,7 @@ zclient_socket_un (char *path)
     }
   return sock;
 }
-
+#endif /* FOX_SUPPORT */
 /* Send simple Zebra message. */
 int
 zebra_message_send (struct zclient *zclient, int command)
@@ -219,9 +221,10 @@ zclient_start (struct zclient *zclient)
 {
   int i;
 
+#ifdef FOX_RIP_DEBUG
   if (zclient_debug)
     zlog_info ("zclient_start is called");
-
+#endif /* FOX_RIP_DEBUG */
   /* zclient is disabled. */
   if (! zclient->enable)
     return 0;
@@ -242,8 +245,10 @@ zclient_start (struct zclient *zclient)
 #endif /* HAVE_TCP_ZEBRA */
   if (zclient->sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       if (zclient_debug)
 	zlog_info ("zclient connection fail");
+#endif /* FOX_RIP_DEBUG */
       zclient->fail++;
       zclient_event (ZCLIENT_CONNECT, zclient);
       return -1;
@@ -251,8 +256,11 @@ zclient_start (struct zclient *zclient)
 
   /* Clear fail count. */
   zclient->fail = 0;
-  if (zclient_debug)
+  if (zclient_debug){
+#ifdef FOX_RIP_DEBUG
     zlog_info ("zclient connect success with socket [%d]", zclient->sock);
+#endif /* FOX_RIP_DEBUG */
+  	}
       
   /* Create read thread. */
   zclient_event (ZCLIENT_READ, zclient);
@@ -281,10 +289,10 @@ zclient_connect (struct thread *t)
 
   zclient = THREAD_ARG (t);
   zclient->t_connect = NULL;
-
+#ifdef FOX_RIP_DEBUG
   if (zclient_debug)
     zlog_info ("zclient_connect is called");
-
+#endif /* FOX_RIP_DEBUG */
   return zclient_start (zclient);
 }
 
@@ -613,7 +621,9 @@ zebra_interface_address_add_read (struct stream *s)
   ifp = if_lookup_by_index (ifindex);
   if (ifp == NULL)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("zebra_interface_address_add_read: Can't find interface by ifindex: %d ", ifindex);
+#endif /* FOX_RIP_DEBUG */
       return NULL;
     }
 
@@ -667,7 +677,9 @@ zebra_interface_address_delete_read (struct stream *s)
   ifp = if_lookup_by_index (ifindex);
   if (ifp == NULL)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("zebra_interface_address_delete_read: Can't find interface by ifindex: %d ", ifindex);
+#endif /* FOX_RIP_DEBUG */
       return NULL;
     }
 
@@ -715,8 +727,10 @@ zclient_read (struct thread *thread)
   /* zebra socket is closed. */
   if (nbytes == 0) 
     {
+#ifdef FOX_RIP_DEBUG
       if (zclient_debug)
 	zlog_info ("zclient connection closed socket [%d].", sock);
+#endif /* FOX_RIP_DEBUG */
       zclient->fail++;
       zclient_stop (zclient);
       zclient_event (ZCLIENT_CONNECT, zclient);
@@ -726,8 +740,10 @@ zclient_read (struct thread *thread)
   /* zebra read error. */
   if (nbytes < 0 || nbytes != ZEBRA_HEADER_SIZE)
     {
+#ifdef FOX_RIP_DEBUG
       if (zclient_debug)
 	zlog_info ("Can't read all packet (length %d).", nbytes);
+#endif /* FOX_RIP_DEBUG */
       zclient->fail++;
       zclient_stop (zclient);
       zclient_event (ZCLIENT_CONNECT, zclient);
@@ -750,8 +766,10 @@ zclient_read (struct thread *thread)
   nbytes = stream_read (zclient->ibuf, sock, length);
  if (nbytes != length)
    {
+#ifdef FOX_RIP_DEBUG
      if (zclient_debug)
        zlog_info ("zclient connection closed socket [%d].", sock);
+#endif /* FOX_RIP_DEBUG */
      zclient->fail++;
      zclient_stop (zclient);
      zclient_event (ZCLIENT_CONNECT, zclient);
@@ -792,6 +810,7 @@ zclient_read (struct thread *thread)
       if (zclient->ipv4_route_delete)
 	ret = (*zclient->ipv4_route_delete) (command, zclient, length);
       break;
+#ifdef HAVE_IPV6
     case ZEBRA_IPV6_ROUTE_ADD:
       if (zclient->ipv6_route_add)
 	ret = (*zclient->ipv6_route_add) (command, zclient, length);
@@ -800,6 +819,7 @@ zclient_read (struct thread *thread)
       if (zclient->ipv6_route_delete)
 	ret = (*zclient->ipv6_route_delete) (command, zclient, length);
       break;
+#endif /* HAVE_IPV6 */
     default:
       break;
     }
@@ -873,9 +893,11 @@ zclient_event (enum event event, struct zclient *zclient)
     case ZCLIENT_CONNECT:
       if (zclient->fail >= 10)
 	return;
+#ifdef FOX_RIP_DEBUG
       if (zclient_debug)
 	zlog_info ("zclient connect schedule interval is %d", 
 		   zclient->fail < 3 ? 10 : 60);
+#endif /* FOX_RIP_DEBUG */
       if (! zclient->t_connect)
 	zclient->t_connect = 
 	  thread_add_timer (master, zclient_connect, zclient,

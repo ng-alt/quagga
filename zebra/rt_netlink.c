@@ -78,16 +78,20 @@ netlink_socket (struct nlsock *nl, unsigned long groups)
   sock = socket (AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
   if (sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "Can't open %s socket: %s", nl->name,
 	    strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
   ret = fcntl (sock, F_SETFL, O_NONBLOCK);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "Can't set %s socket flags: %s", nl->name,
 	    strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       close (sock);
       return -1;
     }
@@ -100,8 +104,10 @@ netlink_socket (struct nlsock *nl, unsigned long groups)
   ret = bind (sock, (struct sockaddr *) &snl, sizeof snl);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "Can't bind %s socket to group 0x%x: %s", 
 	    nl->name, snl.nl_groups, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       close (sock);
       return -1;
     }
@@ -111,8 +117,10 @@ netlink_socket (struct nlsock *nl, unsigned long groups)
   ret = getsockname (sock, (struct sockaddr *) &snl, &namelen);
   if (ret < 0 || namelen != sizeof snl)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "Can't get %s socket name: %s", nl->name,
 	    strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       close (sock);
       return -1;
     }
@@ -139,7 +147,9 @@ netlink_request (int family, int type, struct nlsock *nl)
   /* Check netlink socket. */
   if (nl->sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "%s socket isn't active.", nl->name);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -157,7 +167,9 @@ netlink_request (int family, int type, struct nlsock *nl)
 		(struct sockaddr*) &snl, sizeof snl);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "%s sendto failed: %s", nl->name, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
   return 0;
@@ -189,20 +201,26 @@ netlink_parse_info (int (*filter) (struct sockaddr_nl *, struct nlmsghdr *),
 	    continue;
 	  if (errno == EWOULDBLOCK)
 	    break;
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_ERR, "%s recvmsg overrun", nl->name);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
 
       if (status == 0)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_ERR, "%s EOF", nl->name);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
 
       if (msg.msg_namelen != sizeof snl)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_ERR, "%s sender address length error: length %d",
 	       nl->name, msg.msg_namelen);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
 
@@ -221,6 +239,7 @@ netlink_parse_info (int (*filter) (struct sockaddr_nl *, struct nlmsghdr *),
               /* If the error field is zero, then this is an ACK */
               if (err->error == 0) 
                 {
+#ifdef FOX_RIP_DEBUG
                   if (IS_ZEBRA_DEBUG_KERNEL) 
                     {  
                       zlog_info("%s: %s ACK: type=%s(%u), seq=%u, pid=%d", 
@@ -229,7 +248,7 @@ netlink_parse_info (int (*filter) (struct sockaddr_nl *, struct nlmsghdr *),
                         err->msg.nlmsg_type, err->msg.nlmsg_seq,
 		        err->msg.nlmsg_pid);
                     }
-                
+#endif /* FOX_RIP_DEBUG */              
                   /* return if not a multipart message, otherwise continue */  
                   if(!(h->nlmsg_flags & NLM_F_MULTI)) 
                     { 
@@ -240,42 +259,50 @@ netlink_parse_info (int (*filter) (struct sockaddr_nl *, struct nlmsghdr *),
               
               if (h->nlmsg_len < NLMSG_LENGTH (sizeof (struct nlmsgerr)))
 		{
+#ifdef FOX_RIP_DEBUG
 		  zlog (NULL, LOG_ERR, "%s error: message truncated",
 			nl->name);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
+#ifdef FOX_RIP_DEBUG
 	      zlog (NULL, LOG_ERR, "%s error: %s, type=%s(%u), seq=%u, pid=%d",
 		    nl->name, strerror (-err->error),
 		    lookup (nlmsg_str, err->msg.nlmsg_type),
 		    err->msg.nlmsg_type, err->msg.nlmsg_seq,
 		    err->msg.nlmsg_pid);
+#endif /* FOX_RIP_DEBUG */
 	      /*
 	      ret = -1;
 	      continue;
 	      */
 	      return -1;
 	    }
-
+#ifdef FOX_RIP_DEBUG
 	  /* OK we got netlink message. */
 	  if (IS_ZEBRA_DEBUG_KERNEL)
 	    zlog_info ("netlink_parse_info: %s type %s(%u), seq=%u, pid=%d",
 		      nl->name,
 		      lookup (nlmsg_str, h->nlmsg_type), h->nlmsg_type,
 		      h->nlmsg_seq, h->nlmsg_pid);
-
+#endif /* FOX_RIP_DEBUG */
 	  /* skip unsolicited messages originating from command socket */
 	  if (nl != &netlink_cmd && h->nlmsg_pid == netlink_cmd.snl.nl_pid)
 	    {
+#ifdef FOX_RIP_DEBUG
 	      if (IS_ZEBRA_DEBUG_KERNEL)
 		zlog_info ("netlink_parse_info: %s packet comes from %s",
 			  nl->name, netlink_cmd.name);
+#endif /* FOX_RIP_DEBUG */
 	      continue;
 	    }
 
 	  error = (*filter) (&snl, h);
 	  if (error < 0)
 	    {
+#ifdef FOX_RIP_DEBUG
 	      zlog (NULL, LOG_ERR, "%s filter function error", nl->name);
+#endif /* FOX_RIP_DEBUG */
 	      ret = error;
 	    }
 	}
@@ -283,13 +310,17 @@ netlink_parse_info (int (*filter) (struct sockaddr_nl *, struct nlmsghdr *),
       /* After error care. */
       if (msg.msg_flags & MSG_TRUNC)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_ERR, "%s error: message truncated", nl->name);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
       if (status)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_ERR, "%s error: data remnant size %d", nl->name,
 		status);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
     }
@@ -353,8 +384,11 @@ netlink_interface (struct sockaddr_nl *snl, struct nlmsghdr *h)
 
       hw_addr_len = RTA_PAYLOAD(tb[IFLA_ADDRESS]);
 
-      if (hw_addr_len > INTERFACE_HWADDR_MAX)
+      if (hw_addr_len > INTERFACE_HWADDR_MAX) {
+#ifdef FOX_RIP_DEBUG
 	zlog_warn ("Hardware address is too large: %d", hw_addr_len);
+#endif /* FOX_RIP_DEBUG */
+      }
       else
 	{      
 	  ifp->hw_addr_len = hw_addr_len;
@@ -411,8 +445,10 @@ netlink_interface_addr (struct sockaddr_nl *snl, struct nlmsghdr *h)
   ifp = if_lookup_by_index (ifa->ifa_index);
   if (ifp == NULL)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_err ("netlink_interface_addr can't find interface by index %d",
 		ifa->ifa_index);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -580,6 +616,7 @@ netlink_routing_table (struct sockaddr_nl *snl, struct nlmsghdr *h)
   return 0;
 }
 
+#if defined FOX_RIP_DEBUG
 struct message rtproto_str [] = 
 {
   {RTPROT_REDIRECT, "redirect"},
@@ -595,6 +632,7 @@ struct message rtproto_str [] =
 #endif /* RTPROT_BIRD */
   {0,               NULL}
 };
+#endif /* FOX_RIP_DEBUG */
 
 /* Routing information change from the kernel. */
 int
@@ -616,10 +654,12 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
   if (! (h->nlmsg_type == RTM_NEWROUTE || h->nlmsg_type == RTM_DELROUTE))
     {
       /* If this is not route add/delete message print warning. */
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Kernel message: %d\n", h->nlmsg_type);
+#endif /* FOX_RIP_DEBUG */
       return 0;
     }
-
+#ifdef FOX_RIP_DEBUG
   /* Connected route. */
   if (IS_ZEBRA_DEBUG_KERNEL)
     zlog_info ("%s %s %s proto %s",
@@ -627,7 +667,7 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
 	       rtm->rtm_family == AF_INET ? "ipv4" : "ipv6",
 	       rtm->rtm_type == RTN_UNICAST ? "unicast" : "multicast",
 	       lookup (rtproto_str, rtm->rtm_protocol));
-
+#endif /* FOX_RIP_DEBUG */
   if (rtm->rtm_type != RTN_UNICAST)
     {
       return 0;
@@ -658,7 +698,9 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
 
   if (rtm->rtm_src_len != 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("netlink_route_change(): no src len");
+#endif /* FOX_RIP_DEBUG */
       return 0;
     }
   
@@ -684,6 +726,7 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
       memcpy (&p.prefix, dest, 4);
       p.prefixlen = rtm->rtm_dst_len;
 
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	{
 	  if (h->nlmsg_type == RTM_NEWROUTE)
@@ -693,6 +736,7 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
 	    zlog_info ("RTM_DELROUTE %s/%d",
 		       inet_ntoa (p.prefix), p.prefixlen);
 	}
+#endif /* FOX_RIP_DEBUG */
 
       if (h->nlmsg_type == RTM_NEWROUTE)
 	rib_add_ipv4 (ZEBRA_ROUTE_KERNEL, 0, &p, gate, index, table, 0, 0);
@@ -710,6 +754,7 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
       memcpy (&p.prefix, dest, 16);
       p.prefixlen = rtm->rtm_dst_len;
 
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	{
 	  if (h->nlmsg_type == RTM_NEWROUTE)
@@ -721,7 +766,7 @@ netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
 		       inet_ntop (AF_INET6, &p.prefix, buf, BUFSIZ),
 		       p.prefixlen);
 	}
-
+#endif /* FOX_RIP_DEBUG */
       if (h->nlmsg_type == RTM_NEWROUTE)
 	rib_add_ipv6 (ZEBRA_ROUTE_KERNEL, 0, &p, gate, index, 0);
       else
@@ -745,9 +790,11 @@ netlink_link_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
 
   if (! (h->nlmsg_type == RTM_NEWLINK || h->nlmsg_type == RTM_DELLINK))
     {
+#ifdef FOX_RIP_DEBUG
       /* If this is not link add/delete message so print warning. */
       zlog_warn ("netlink_link_change: wrong kernel message %d\n",
 		 h->nlmsg_type);
+#endif /* FOX_RIP_DEBUG */
       return 0;
     }
 
@@ -808,8 +855,10 @@ netlink_link_change (struct sockaddr_nl *snl, struct nlmsghdr *h)
 
       if (ifp == NULL)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_WARNING, "interface %s is deleted but can't find",
 		ifp->name);
+#endif /* FOX_RIP_DEBUG */
 	  return 0;
 	}
       
@@ -843,7 +892,9 @@ netlink_information_fetch (struct sockaddr_nl *snl, struct nlmsghdr *h)
       return netlink_interface_addr (snl, h);
       break;
     default:
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Unknown netlink nlmsg_type %d\n", h->nlmsg_type);
+#endif /* FOX_RIP_DEBUG */
       break;
     }
   return 0;
@@ -979,7 +1030,9 @@ addattr32 (struct nlmsghdr *n, int maxlen, int type, int data)
 static int
 netlink_talk_filter (struct sockaddr_nl *snl, struct nlmsghdr *h)
 {
+#ifdef FOX_RIP_DEBUG
   zlog_warn ("netlink_talk: ignoring message type 0x%04x", h->nlmsg_type);
+#endif /* FOX_RIP_DEBUG */
   return 0;
 }
 
@@ -1001,17 +1054,20 @@ netlink_talk (struct nlmsghdr *n, struct nlsock *nl)
   /* Request an acknowledgement by setting NLM_F_ACK */
   n->nlmsg_flags |= NLM_F_ACK;
   
+#ifdef FOX_RIP_DEBUG  
   if (IS_ZEBRA_DEBUG_KERNEL) 
     zlog_info ("netlink_talk: %s type %s(%u), seq=%u", netlink_cmd.name,
 	      lookup (nlmsg_str, n->nlmsg_type), n->nlmsg_type,
 	      n->nlmsg_seq);
-
+#endif /* FOX_RIP_DEBUG */
   /* Send message to netlink interface. */
   status = sendmsg (nl->sock, &msg, 0);
   if (status < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "netlink_talk sendmsg() error: %s",
 	    strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
   
@@ -1021,14 +1077,18 @@ netlink_talk (struct nlmsghdr *n, struct nlsock *nl)
    */
   if((flags = fcntl(nl->sock, F_GETFL, 0)) < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "%s:%i F_GETFL error: %s", 
               __FUNCTION__, __LINE__, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
     }
   flags &= ~O_NONBLOCK;
   if(fcntl(nl->sock, F_SETFL, flags) < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "%s:%i F_SETFL error: %s", 
               __FUNCTION__, __LINE__, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
     }
 
   /* 
@@ -1041,8 +1101,10 @@ netlink_talk (struct nlmsghdr *n, struct nlsock *nl)
   flags |= O_NONBLOCK;
   if(fcntl(nl->sock, F_SETFL, flags) < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_ERR, "%s:%i F_SETFL error: %s", 
               __FUNCTION__, __LINE__, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
     }
   
   return status;
@@ -1328,8 +1390,10 @@ netlink_route_multipath (int cmd, struct prefix *p, struct rib *rib,
   /* If there is no useful nexthop then return. */
   if (nexthop_num == 0)
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	zlog_info ("netlink_route_multipath(): No useful nexthop.");
+#endif /* FOX_RIP_DEBUG */
       return 0;
     }
 

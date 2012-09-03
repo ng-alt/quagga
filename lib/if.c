@@ -295,9 +295,19 @@ if_is_pointopoint (struct interface *ifp)
 int
 if_is_multicast (struct interface *ifp)
 {
+/*  add by fred 20060221 */
+// Use M.conf file instead of multicast flag //
+// M.conf create from rc/service.c //
+  FILE *fp;
+  if(!(fp=fopen("/tmp/M.conf","r")))
+	return 0;
+  else
+  	fclose(fp);
+/*  end */
   return ifp->flags & IFF_MULTICAST;
 }
 
+#ifdef FOX_RIP_DEBUG
 /* Printout flag information into log */
 const char *
 if_flag_dump (unsigned long flag)
@@ -337,17 +347,19 @@ if_flag_dump (unsigned long flag)
 
   return logbuf;
 }
+#endif /* FOX_RIP_DEBUG */
 
+#ifdef FOX_CMD_SUPPORT
 /* For debugging */
 void
 if_dump (struct interface *ifp)
 {
   listnode node;
-
+#ifdef FOX_RIP_DEBUG
   zlog_info ("Interface %s index %d metric %d mtu %d %s",
 	     ifp->name, ifp->ifindex, ifp->metric, ifp->mtu, 
 	     if_flag_dump (ifp->flags));
-  
+#endif /* FOX_RIP_DEBUG */
   for (node = listhead (ifp->connected); node; nextnode (node))
     ;
 }
@@ -408,7 +420,7 @@ DEFUN (no_interface_desc,
 
   return CMD_SUCCESS;
 }
-
+#endif /* FOX_CMD_SUPPORT */
 
 /* See also wrapper function zebra_interface() in zebra/interface.c */
 DEFUN (interface,
@@ -432,6 +444,7 @@ DEFUN (interface,
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* For debug purpose. */
 DEFUN (show_address,
        show_address_cmd,
@@ -461,6 +474,7 @@ DEFUN (show_address,
     }
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Allocate connected structure. */
 struct connected *
@@ -487,6 +501,7 @@ connected_free (struct connected *connected)
   XFREE (MTYPE_CONNECTED, connected);
 }
 
+#ifdef FOX_RIP_DEBUG
 /* Print if_addr structure. */
 void
 connected_log (struct connected *connected, char *str)
@@ -512,6 +527,7 @@ connected_log (struct connected *connected, char *str)
     }
   zlog (NULL, LOG_INFO, logbuf);
 }
+#endif /* FOX_RIP_DEBUG */
 
 /* If two connected address has same prefix return 1. */
 int
@@ -634,8 +650,10 @@ ifaddr_ipv4_add (struct in_addr *ifaddr, struct interface *ifp)
   if (rn)
     {
       route_unlock_node (rn);
+#ifdef FOX_RIP_DEBUG
       zlog_info ("ifaddr_ipv4_add(): address %s is already added",
 		 inet_ntoa (*ifaddr));
+#endif /* FOX_RIP_DEBUG */
       return;
     }
   rn->info = ifp;
@@ -654,8 +672,10 @@ ifaddr_ipv4_delete (struct in_addr *ifaddr, struct interface *ifp)
   rn = route_node_lookup (ifaddr_ipv4_table, (struct prefix *) &p);
   if (! rn)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("ifaddr_ipv4_delete(): can't find address %s",
 		 inet_ntoa (*ifaddr));
+#endif /* FOX_RIP_DEBUG */
       return;
     }
   rn->info = NULL;
@@ -701,7 +721,7 @@ ifaddr_ipv4_lookup (struct in_addr *addr, unsigned int ifindex)
 
 /* Initialize interface list. */
 void
-if_init ()
+if_init (int mcast_fox_onoff)
 {
   iflist = list_new ();
   ifaddr_ipv4_table = route_table_init ();

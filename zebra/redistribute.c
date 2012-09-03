@@ -290,9 +290,10 @@ zebra_interface_up_update (struct interface *ifp)
   listnode node;
   struct zserv *client;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_ZEBRA_DEBUG_EVENT)
     zlog_info ("MESSAGE: ZEBRA_INTERFACE_UP %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
   for (node = listhead (client_list); node; nextnode (node))
     if ((client = getdata (node)) != NULL)
       zsend_interface_up (client, ifp);
@@ -305,8 +306,10 @@ zebra_interface_down_update (struct interface *ifp)
   listnode node;
   struct zserv *client;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_ZEBRA_DEBUG_EVENT)
     zlog_info ("MESSAGE: ZEBRA_INTERFACE_DOWN %s", ifp->name);
+#endif /* FOX_RIP_DEBUG */
 
   for (node = listhead (client_list); node; nextnode (node))
     if ((client = getdata (node)) != NULL)
@@ -320,8 +323,10 @@ zebra_interface_add_update (struct interface *ifp)
   listnode node;
   struct zserv *client;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_ZEBRA_DEBUG_EVENT)
     zlog_info ("MESSAGE: ZEBRA_INTERFACE_ADD %s", ifp->name);
+#endif /* FOX_RIP_DEBUG */
     
   for (node = listhead (client_list); node; nextnode (node))
     if ((client = getdata (node)) != NULL)
@@ -335,8 +340,10 @@ zebra_interface_delete_update (struct interface *ifp)
   listnode node;
   struct zserv *client;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_ZEBRA_DEBUG_EVENT)
     zlog_info ("MESSAGE: ZEBRA_INTERFACE_DELETE %s", ifp->name);
+#endif /* FOX_RIP_DEBUG */
 
   for (node = listhead (client_list); node; nextnode (node))
     if ((client = getdata (node)) != NULL)
@@ -354,6 +361,7 @@ zebra_interface_address_add_update (struct interface *ifp,
   struct prefix *p;
   char buf[BUFSIZ];
 
+#ifdef FOX_RIP_DEBUG
   if (IS_ZEBRA_DEBUG_EVENT)
     {
       p = ifc->address;
@@ -361,6 +369,7 @@ zebra_interface_address_add_update (struct interface *ifp,
 		 inet_ntop (p->family, &p->u.prefix, buf, BUFSIZ),
 		 p->prefixlen, ifc->ifp->name);
     }
+#endif /* FOX_RIP_DEBUG */
 
   for (node = listhead (client_list); node; nextnode (node))
     if ((client = getdata (node)) != NULL)
@@ -378,6 +387,7 @@ zebra_interface_address_delete_update (struct interface *ifp,
   struct prefix *p;
   char buf[BUFSIZ];
 
+#ifdef FOX_RIP_DEBUG
   if (IS_ZEBRA_DEBUG_EVENT)
     {
       p = ifc->address;
@@ -385,7 +395,7 @@ zebra_interface_address_delete_update (struct interface *ifp,
 		 inet_ntop (p->family, &p->u.prefix, buf, BUFSIZ),
 		 p->prefixlen, ifc->ifp->name);
     }
-
+#endif /* FOX_RIP_DEBUG */
   for (node = listhead (client_list); node; nextnode (node))
     if ((client = getdata (node)) != NULL)
       if (client->ifinfo && CHECK_FLAG (ifc->conf, ZEBRA_IFC_REAL))

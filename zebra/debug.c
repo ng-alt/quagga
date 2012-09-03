@@ -20,6 +20,8 @@
  * Boston, MA 02111-1307, USA.  
  */
 
+#ifdef FOX_RIP_DEBUG
+
 #include <zebra.h>
 #include "command.h"
 #include "debug.h"
@@ -270,3 +272,5 @@ zebra_debug_init ()
   install_element (CONFIG_NODE, &no_debug_zebra_packet_cmd);
   install_element (CONFIG_NODE, &no_debug_zebra_kernel_cmd);
 }
+
+#endif /* FOX_RIP_DEBUG */

@@ -19,6 +19,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#ifdef FOX_LIST_SUPPORT
+
 #include <zebra.h>
 
 #include "prefix.h"
@@ -2879,3 +2881,6 @@ prefix_list_reset ()
 #endif /* HAVE_IPV6 */
   prefix_list_reset_orf ();
 }
+
+#endif /* FOX_LIST_SUPPORT */
+

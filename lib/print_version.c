@@ -18,7 +18,7 @@
  * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
-
+#ifdef FOX_CMD_SUPPORT
 #include <zebra.h>
 
 #include "version.h"
@@ -29,3 +29,4 @@ print_version (char *progname)
   printf ("%s version %s (%s)\n", progname, ZEBRA_VERSION, host_name);
   printf ("Copyright 1996-2001, Kunihiro Ishiguro\n");
 }
+#endif /* FOX_CMD_SUPPORT */

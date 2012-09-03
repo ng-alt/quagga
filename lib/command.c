@@ -32,6 +32,7 @@ vector cmdvec;
 /* Host information structure. */
 struct host host;
 
+#ifdef FOX_CMD_SUPPORT
 /* Default motd string. */
 char *default_motd = 
 "\r\n\
@@ -45,18 +46,19 @@ struct cmd_node auth_node =
   AUTH_NODE,
   "Password: ",
 };
-
+#endif /* FOX_CMD_SUPPORT */
 struct cmd_node view_node =
 {
   VIEW_NODE,
   "%s> ",
 };
-
+#ifdef FOX_CMD_SUPPORT
 struct cmd_node auth_enable_node =
 {
   AUTH_ENABLE_NODE,
   "Password: ",
 };
+#endif /* FOX_CMD_SUPPORT */
 
 struct cmd_node enable_node =
 {
@@ -429,6 +431,10 @@ to64(char *s, long v, int n)
     }
 }
 
+/*  modified start, wenchia, 2006/06/02 */
+/* Do not support password encryption */
+/* Remove the following code */
+/*
 char *zencrypt (char *passwd)
 {
   char salt[6];
@@ -443,11 +449,14 @@ char *zencrypt (char *passwd)
 
   return crypt (passwd, salt);
 }
+*/
+/*  modified end, wenchia, 2006/06/02 */
 
 /* This function write configuration of this host. */
 int
 config_write_host (struct vty *vty)
 {
+#ifdef FOX_RIP_DEBUG
   if (host.name)
     vty_out (vty, "hostname %s%s", host.name, VTY_NEWLINE);
 
@@ -493,6 +502,7 @@ config_write_host (struct vty *vty)
 
   if (! host.motd)
     vty_out (vty, "no banner motd%s", VTY_NEWLINE);
+#endif /* FOX_RIP_DEBUG */
 
   return 1;
 }
@@ -701,6 +711,7 @@ cmd_ipv4_prefix_match (char *str)
   return exact_match;
 }
 
+#if defined(FOX_CMD_SUPPORT) && defined(HAVE_IPV6)
 #define IPV6_ADDR_STR		"0123456789abcdefABCDEF:.%"
 #define IPV6_PREFIX_STR		"0123456789abcdefABCDEF:.%/"
 #define STATE_START		1
@@ -936,6 +947,7 @@ cmd_ipv6_prefix_match (char *str)
 
   return exact_match;
 }
+#endif /* FOX_CMD_SUPPORT and HAVE_IPV6 */
 
 #define DECIMAL_STRLEN_MAX 10
 
@@ -1031,6 +1043,7 @@ cmd_filter_by_completion (char *command, vector v, int index)
 			matched++;
 		      }
 		  }
+#ifdef HAVE_IPV6
 		else if (CMD_IPV6 (str))
 		  {
 		    if (cmd_ipv6_match (command))
@@ -1051,6 +1064,7 @@ cmd_filter_by_completion (char *command, vector v, int index)
 			matched++;
 		      }
 		  }
+#endif /* HAVE IPV6 */
 		else if (CMD_IPV4 (str))
 		  {
 		    if (cmd_ipv4_match (command))
@@ -1145,6 +1159,7 @@ cmd_filter_by_string (char *command, vector v, int index)
 			matched++;
 		      }
 		  }
+#ifdef HAVE_IPV6
 		else if (CMD_IPV6 (str))
 		  {
 		    if (cmd_ipv6_match (command) == exact_match)
@@ -1163,6 +1178,7 @@ cmd_filter_by_string (char *command, vector v, int index)
 			matched++;
 		      }
 		  }
+#endif /* HAVE_IPV6 */
 		else if (CMD_IPV4 (str))
 		  {
 		    if (cmd_ipv4_match (command) == exact_match)
@@ -1258,10 +1274,13 @@ is_cmd_ambiguous (char *command, vector v, int index, enum match_type type)
 		  }
 		break;
  	      case ipv6_match:
+#ifdef HAVE_IPV6
 		if (CMD_IPV6 (str))
 		  match++;
+#endif /* HAVE_IPV6 */
 		break;
 	      case ipv6_prefix_match:
+#ifdef HAVE_IPV6
 		if ((ret = cmd_ipv6_prefix_match (command)) != no_match)
 		  {
 		    if (ret == partly_match)
@@ -1269,6 +1288,7 @@ is_cmd_ambiguous (char *command, vector v, int index, enum match_type type)
 
 		    match++;
 		  }
+#endif /* HAVE_IPV6 */
 		break;
 	      case ipv4_match:
 		if (CMD_IPV4 (str))
@@ -1334,7 +1354,7 @@ cmd_entry_function_desc (char *src, char *dst)
       else
 	return NULL;
     }
-
+#ifdef HAVE_IPV6
   if (CMD_IPV6 (dst))
     {
       if (cmd_ipv6_match (src))
@@ -1350,7 +1370,7 @@ cmd_entry_function_desc (char *src, char *dst)
       else
 	return NULL;
     }
-
+#endif /* HAVE_IPV6 */
   if (CMD_IPV4 (dst))
     {
       if (cmd_ipv4_match (src))
@@ -2010,6 +2030,7 @@ config_from_file (struct vty *vty, FILE *fp)
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* Configration from terminal */
 DEFUN (config_terminal,
        config_terminal_cmd,
@@ -2485,6 +2506,11 @@ DEFUN (config_password, password_cmd,
     XFREE (0, host.password);
   host.password = NULL;
 
+  /*  modified start, wenchia, 2006/06/02 */
+  /* Do not support password encryption */
+  host.encrypt = 0;
+  /* Remove the following code */
+  /*
   if (host.encrypt)
     {
       if (host.password_encrypt)
@@ -2492,6 +2518,8 @@ DEFUN (config_password, password_cmd,
       host.password_encrypt = XSTRDUP (0, zencrypt (argv[0]));
     }
   else
+  */
+  /*  modified end, wenchia, 2006/06/02 */
     host.password = XSTRDUP (0, argv[0]);
 
   return CMD_SUCCESS;
@@ -2552,6 +2580,11 @@ DEFUN (config_enable_password, enable_password_cmd,
   host.enable = NULL;
 
   /* Plain password input. */
+  /*  modified start, wenchia, 2006/06/02 */
+  /* Do not support password encryption */
+  host.encrypt = 0;
+  /* Remove the following code */
+  /*
   if (host.encrypt)
     {
       if (host.enable_encrypt)
@@ -2559,6 +2592,8 @@ DEFUN (config_enable_password, enable_password_cmd,
       host.enable_encrypt = XSTRDUP (0, zencrypt (argv[0]));
     }
   else
+  */
+  /*  modified end, wenchia, 2006/06/02 */
     host.enable = XSTRDUP (0, argv[0]);
 
   return CMD_SUCCESS;
@@ -2595,6 +2630,11 @@ DEFUN (service_password_encrypt,
        "Set up miscellaneous service\n"
        "Enable encrypted passwords\n")
 {
+  /*  modified start, wenchia, 2006/06/02 */
+  /* Do not support password encryption */
+  host.encrypt = 0;
+  /* Remove the following code */
+  /*
   if (host.encrypt)
     return CMD_SUCCESS;
 
@@ -2612,7 +2652,9 @@ DEFUN (service_password_encrypt,
 	XFREE (0, host.enable_encrypt);
       host.enable_encrypt = XSTRDUP (0, zencrypt (host.enable));
     }
-
+  */
+  /*  modified end, wenchia, 2006/06/02 */
+  
   return CMD_SUCCESS;
 }
 
@@ -2699,7 +2741,9 @@ DEFUN (no_service_terminal_length, no_service_terminal_length_cmd,
   host.lines = -1;
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
+#ifdef FOX_RIP_DEBUG
 DEFUN (config_log_stdout,
        config_log_stdout_cmd,
        "log stdout",
@@ -2801,7 +2845,9 @@ DEFUN (no_config_log_syslog,
   host.log_syslog = 0;
   return CMD_SUCCESS;
 }
+#endif /* FOX_RIP_DEBUG */
 
+#if defined(FOX_CMD_SUPPORT) && defined(FOX_RIP_DEBUG)
 DEFUN (config_log_trap,
        config_log_trap_cmd,
        "log trap (emergencies|alerts|critical|errors|warnings|notifications|informational|debugging)",
@@ -2877,6 +2923,8 @@ DEFUN (no_banner_motd,
   return CMD_SUCCESS;
 }
 
+#endif /* FOX_CMD_SUPPORT  and  FOX_RIP_DEBUG */
+
 /* Set config filename.  Called from vty.c */
 void
 host_config_set (char *filename)
@@ -2887,6 +2935,7 @@ host_config_set (char *filename)
 void
 install_default (enum node_type node)
 {
+#ifdef FOX_CMD_SUPPORT
   install_element (node, &config_exit_cmd);
   install_element (node, &config_quit_cmd);
   install_element (node, &config_end_cmd);
@@ -2897,6 +2946,7 @@ install_default (enum node_type node)
   install_element (node, &config_write_file_cmd);
   install_element (node, &config_write_memory_cmd);
   install_element (node, &config_write_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }
 
 /* Initialize command interface. Install basic nodes and commands. */
@@ -2913,16 +2963,23 @@ cmd_init (int terminal)
   host.logfile = NULL;
   host.config = NULL;
   host.lines = -1;
+#ifdef FOX_CMD_SUPPORT
   host.motd = default_motd;
+#endif
 
   /* Install top nodes. */
   install_node (&view_node, NULL);
   install_node (&enable_node, NULL);
+
+#ifdef FOX_CMD_SUPPORT
   install_node (&auth_node, NULL);
   install_node (&auth_enable_node, NULL);
+#endif /* FOX_CMD_SUPPORT */
+
   install_node (&config_node, config_write_host);
 
   /* Each node's basic commands. */
+#ifdef FOX_CMD_SUPPORT
   install_element (VIEW_NODE, &show_version_cmd);
   if (terminal)
     {
@@ -2934,22 +2991,28 @@ cmd_init (int terminal)
       install_element (VIEW_NODE, &config_terminal_length_cmd);
       install_element (VIEW_NODE, &config_terminal_no_length_cmd);
     }
+#endif /* FOX_CMD_COMMAND */
 
   if (terminal)
     {
       install_default (ENABLE_NODE);
+#ifdef FOX_CMD_SUPPORT
       install_element (ENABLE_NODE, &config_disable_cmd);
       install_element (ENABLE_NODE, &config_terminal_cmd);
       install_element (ENABLE_NODE, &show_running_config_cmd);
       install_element (ENABLE_NODE, &copy_runningconfig_startupconfig_cmd);
+#endif /* FOX_CMD_SUPPORT */
     }
+#ifdef FOX_CMD_SUPPORT
   install_element (ENABLE_NODE, &show_startup_config_cmd);
   install_element (ENABLE_NODE, &show_version_cmd);
   install_element (ENABLE_NODE, &config_terminal_length_cmd);
   install_element (ENABLE_NODE, &config_terminal_no_length_cmd);
+#endif /* FOX_CMD_SUPPORT */
 
   if (terminal)
     install_default (CONFIG_NODE);
+#ifdef FOX_CMD_SUPPORT
   install_element (CONFIG_NODE, &hostname_cmd);
   install_element (CONFIG_NODE, &no_hostname_cmd);
   install_element (CONFIG_NODE, &password_cmd);
@@ -2957,24 +3020,32 @@ cmd_init (int terminal)
   install_element (CONFIG_NODE, &enable_password_cmd);
   install_element (CONFIG_NODE, &enable_password_text_cmd);
   install_element (CONFIG_NODE, &no_enable_password_cmd);
+#endif /* FOX_CMD_SUPPORT */
+
   if (terminal)
     {
+#ifdef FOX_RIP_DEBUG
       install_element (CONFIG_NODE, &config_log_stdout_cmd);
       install_element (CONFIG_NODE, &no_config_log_stdout_cmd);
       install_element (CONFIG_NODE, &config_log_file_cmd);
       install_element (CONFIG_NODE, &no_config_log_file_cmd);
       install_element (CONFIG_NODE, &config_log_syslog_cmd);
       install_element (CONFIG_NODE, &no_config_log_syslog_cmd);
+#endif /* FOX_RIP_DEBUG */
+#if defined (FOX_CMD_SUPPORT) && defined(FOX_RIP_DEBUG)
       install_element (CONFIG_NODE, &config_log_trap_cmd);
       install_element (CONFIG_NODE, &no_config_log_trap_cmd);
       install_element (CONFIG_NODE, &config_log_record_priority_cmd);
       install_element (CONFIG_NODE, &no_config_log_record_priority_cmd);
+#endif /* (FOX_CMD_SUPPORT) && defined(FOX_RIP_DEBUG) */
+#if defined (FOX_CMD_SUPPORT)
       install_element (CONFIG_NODE, &service_password_encrypt_cmd);
       install_element (CONFIG_NODE, &no_service_password_encrypt_cmd);
       install_element (CONFIG_NODE, &banner_motd_default_cmd);
       install_element (CONFIG_NODE, &no_banner_motd_cmd);
       install_element (CONFIG_NODE, &service_terminal_length_cmd);
       install_element (CONFIG_NODE, &no_service_terminal_length_cmd);
+#endif /* FOX_CMD_SUPPORT */
     }
 
   srand(time(NULL));

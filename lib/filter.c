@@ -512,7 +512,7 @@ access_list_filter_delete (struct access_list *access, struct filter *filter)
   any                  Any source host
   host                 A single host address
 */
-
+#ifdef FOX_LIST_SUPPORT
 struct filter *
 filter_lookup_cisco (struct access_list *access, struct filter *mnew)
 {
@@ -546,6 +546,7 @@ filter_lookup_cisco (struct access_list *access, struct filter *mnew)
 
   return NULL;
 }
+#endif /*FOX_LIST_SUPPORT*/
 
 struct filter *
 filter_lookup_zebra (struct access_list *access, struct filter *mnew)
@@ -593,6 +594,7 @@ vty_access_list_remark_unset (struct vty *vty, afi_t afi, char *name)
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_LIST_SUPPORT
 int
 filter_set_cisco (struct vty *vty, char *name_str, char *type_str,
 		  char *addr_str, char *addr_mask_str,
@@ -1151,6 +1153,7 @@ DEFUN (no_access_list_extended_host_any,
 			   "0.0.0.0", "0.0.0.0",
 			   "255.255.255.255", 1, 0);
 }
+#endif /* FOX_LIST_SUPPORT */
 
 int
 filter_set_zebra (struct vty *vty, char *name_str, char *type_str,
@@ -1346,6 +1349,8 @@ DEFUN (no_access_list_all,
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_LIST_SUPPORT
+
 DEFUN (access_list_remark,
        access_list_remark_cmd,
        "access-list (<1-99>|<100-199>|<1300-1999>|<2000-2699>|WORD) remark .LINE",
@@ -1413,6 +1418,7 @@ ALIAS (no_access_list_remark,
        "IP zebra access-list\n"
        "Access list entry comment\n"
        "Comment up to 100 characters\n")
+#endif /* FOX_LIST_SUPPORT */
 
 #ifdef HAVE_IPV6
 DEFUN (ipv6_access_list,
@@ -1927,8 +1933,10 @@ access_list_init_ipv4 ()
 {
   install_node (&access_node, config_write_access_ipv4);
 
+#ifdef FOX_LIST_SUPPORT
   install_element (ENABLE_NODE, &show_ip_access_list_cmd);
   install_element (ENABLE_NODE, &show_ip_access_list_name_cmd);
+#endif /* FOX_LIST_SUPPORT */
 
   /* Zebra access-list */
   install_element (CONFIG_NODE, &access_list_cmd);
@@ -1938,6 +1946,7 @@ access_list_init_ipv4 ()
   install_element (CONFIG_NODE, &no_access_list_exact_cmd);
   install_element (CONFIG_NODE, &no_access_list_any_cmd);
 
+#ifdef FOX_LIST_SUPPORT
   /* Standard access-list */
   install_element (CONFIG_NODE, &access_list_standard_cmd);
   install_element (CONFIG_NODE, &access_list_standard_nomask_cmd);
@@ -1972,6 +1981,7 @@ access_list_init_ipv4 ()
   install_element (CONFIG_NODE, &no_access_list_all_cmd);
   install_element (CONFIG_NODE, &no_access_list_remark_cmd);
   install_element (CONFIG_NODE, &no_access_list_remark_arg_cmd);
+ #endif /* FOX_LIST_SUPPORT */
 }
 
 #ifdef HAVE_IPV6

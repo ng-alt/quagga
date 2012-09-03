@@ -260,6 +260,7 @@ nexthop_active_ipv4 (struct rib *rib, struct nexthop *nexthop, int set,
 	if (CHECK_FLAG (match->flags, ZEBRA_FLAG_SELECTED))
 	  break;
 
+#ifdef FOX_BGP_SUPPORT
       /* If there is no selected route or matched route is EGP, go up
          tree. */
       if (! match 
@@ -273,6 +274,7 @@ nexthop_active_ipv4 (struct rib *rib, struct nexthop *nexthop, int set,
 	}
       else
 	{
+#endif /* FOX_BGP_SUPPORT */
 	  if (match->type == ZEBRA_ROUTE_CONNECT)
 	    {
 	      /* Directly point connected route. */
@@ -308,7 +310,9 @@ nexthop_active_ipv4 (struct rib *rib, struct nexthop *nexthop, int set,
 	    {
 	      return 0;
 	    }
+#ifdef FOX_BGP_SUPPORT
 	}
+#endif
     }
   return 0;
 }
@@ -432,6 +436,7 @@ rib_match_ipv4 (struct in_addr addr)
 	if (CHECK_FLAG (match->flags, ZEBRA_FLAG_SELECTED))
 	  break;
 
+#ifdef FOX_BGP_SUPPORT
       /* If there is no selected route or matched route is EGP, go up
          tree. */
       if (! match 
@@ -445,6 +450,7 @@ rib_match_ipv4 (struct in_addr addr)
 	}
       else
 	{
+#endif /* FOX_BGP_SUPPORT */
 	  if (match->type == ZEBRA_ROUTE_CONNECT)
 	    /* Directly point connected route. */
 	    return match;
@@ -455,7 +461,9 @@ rib_match_ipv4 (struct in_addr addr)
 		  return match;
 	      return NULL;
 	    }
+#ifdef FOX_BGP_SUPPORT
 	}
+#endif
     }
   return NULL;
 }
@@ -481,8 +489,10 @@ rib_lookup_ipv4 (struct prefix_ipv4 *p)
     if (CHECK_FLAG (match->flags, ZEBRA_FLAG_SELECTED))
       break;
 
+#ifdef FOX_BGP_SUPPORT
   if (! match || match->type == ZEBRA_ROUTE_BGP)
     return NULL;
+#endif
 
   if (match->type == ZEBRA_ROUTE_CONNECT)
     return match;
@@ -837,9 +847,11 @@ rib_add_ipv4 (int type, int flags, struct prefix_ipv4 *p,
     {
       distance = route_info[type].distance;
 
+#ifdef FOX_BGP_SUPPORT
       /* iBGP distance is 200. */
       if (type == ZEBRA_ROUTE_BGP && CHECK_FLAG (flags, ZEBRA_FLAG_IBGP))
 	distance = 200;
+#endif /* FOX_BGP_SUPPORT */
     }
 
   /* Lookup route node.*/
@@ -928,10 +940,12 @@ rib_add_ipv4_multipath (struct prefix_ipv4 *p, struct rib *rib)
     {
       rib->distance = route_info[rib->type].distance;
 
+#ifdef FOX_BGP_SUPPORT
       /* iBGP distance is 200. */
       if (rib->type == ZEBRA_ROUTE_BGP 
 	  && CHECK_FLAG (rib->flags, ZEBRA_FLAG_IBGP))
 	rib->distance = 200;
+#endif /* FOX_BGP_SUPPORT */
     }
 
   /* Lookup route node.*/
@@ -987,6 +1001,7 @@ rib_delete_ipv4 (int type, int flags, struct prefix_ipv4 *p,
   rn = route_node_lookup (rib_table_ipv4, (struct prefix *) p);
   if (! rn)
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	{
 	  if (gate)
@@ -1001,6 +1016,7 @@ rib_delete_ipv4 (int type, int flags, struct prefix_ipv4 *p,
 		       p->prefixlen,
 		       ifindex);
 	}
+#endif /* FOX_RIP_DEBUG */
       return ZEBRA_ERR_RTNOEXIST;
     }
 
@@ -1055,6 +1071,7 @@ rib_delete_ipv4 (int type, int flags, struct prefix_ipv4 *p,
 	}
       else
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_ZEBRA_DEBUG_KERNEL)
 	    {
 	      if (gate)
@@ -1071,6 +1088,7 @@ rib_delete_ipv4 (int type, int flags, struct prefix_ipv4 *p,
 			   ifindex,
 			   type);
 	    }
+#endif /* FOX_RIP_DEBUG */
 	  route_unlock_node (rn);
 	  return ZEBRA_ERR_RTNOEXIST;
 	}
@@ -1365,6 +1383,7 @@ static_ipv4_delete (struct prefix_ipv4 *p, struct in_addr *gate, char *ifname,
   return 1;
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* Write IPv4 static route configuration. */
 int
 static_ipv4_write (struct vty *vty)
@@ -1988,6 +2007,7 @@ DEFUN (show_ip_route_prefix,
 
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 #ifdef HAVE_IPV6
 int
@@ -2123,6 +2143,7 @@ rib_delete_ipv6 (int type, int flags, struct prefix_ipv6 *p,
   rn = route_node_lookup (rib_table_ipv6, (struct prefix *) p);
   if (! rn)
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	{
 	  if (gate)
@@ -2137,6 +2158,7 @@ rib_delete_ipv6 (int type, int flags, struct prefix_ipv6 *p,
 		       p->prefixlen,
 		       ifindex);
 	}
+#endif /* FOX_RIP_DEBUG */
       return ZEBRA_ERR_RTNOEXIST;
     }
 
@@ -2191,6 +2213,7 @@ rib_delete_ipv6 (int type, int flags, struct prefix_ipv6 *p,
 	}
       else
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_ZEBRA_DEBUG_KERNEL)
 	    {
 	      if (gate)
@@ -2207,6 +2230,7 @@ rib_delete_ipv6 (int type, int flags, struct prefix_ipv6 *p,
 			   ifindex,
 			   type);
 	    }
+#endif /* FOX_RIP_DEBUG */
 	  route_unlock_node (rn);
 	  return ZEBRA_ERR_RTNOEXIST;
 	}
@@ -3229,6 +3253,7 @@ rib_close ()
 #endif /* HAVE_IPV6 */
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* Static ip route configuration write function. */
 int
 config_write_ip (struct vty *vty)
@@ -3250,16 +3275,20 @@ struct cmd_node ip_node =
   "",				/* This node has no interface. */
   1
 };
+#endif /* FOX_CMD_SUPPORT */
 
 /* Routing information base initialize. */
 void
 rib_init ()
 {
+#ifdef FOX_CMD_SUPPORT
   install_node (&ip_node, config_write_ip);
+#endif
 
   rib_table_ipv4 = route_table_init ();
   static_table_ipv4 = route_table_init ();
 
+#ifdef FOX_CMD_SUPPORT
   install_element (VIEW_NODE, &show_ip_route_cmd);
   install_element (VIEW_NODE, &show_ip_route_addr_cmd);
   install_element (VIEW_NODE, &show_ip_route_prefix_cmd);
@@ -3280,11 +3309,13 @@ rib_init ()
   install_element (CONFIG_NODE, &ip_route_mask_pref_cmd);
   install_element (CONFIG_NODE, &no_ip_route_pref_cmd);
   install_element (CONFIG_NODE, &no_ip_route_mask_pref_cmd);
+#endif /* FOX_CMD_SUPPORT */
 
 #ifdef HAVE_IPV6
   rib_table_ipv6 = route_table_init ();
   static_table_ipv6 = route_table_init ();
 
+#ifdef FOX_CMD_SUPPORT
   install_element (CONFIG_NODE, &ipv6_route_cmd);
   install_element (CONFIG_NODE, &ipv6_route_ifname_cmd);
   install_element (CONFIG_NODE, &no_ipv6_route_cmd);
@@ -3303,5 +3334,6 @@ rib_init ()
   install_element (ENABLE_NODE, &show_ipv6_route_addr_cmd);
   install_element (ENABLE_NODE, &show_ipv6_route_prefix_cmd);
   install_element (ENABLE_NODE, &show_ipv6_route_prefix_longer_cmd);
+#endif /* FOX_CMD_SUPPORT */
 #endif /* HAVE_IPV6 */
 }

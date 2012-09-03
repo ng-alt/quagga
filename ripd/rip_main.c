@@ -121,16 +121,21 @@ signal_set (int signo, void (*func)(int))
 void 
 sighup (int sig)
 {
+#ifdef FOX_RIP_DEBUG
   zlog_info ("SIGHUP received");
+#endif /* FOX_RIP_DEBUG */
   rip_clean ();
   rip_reset ();
+#ifdef FOX_RIP_DEBUG
   zlog_info ("ripd restarting!");
-
+#endif /* FOX_RIP_DEBUG */
   /* Reload config file. */
   vty_read_config (config_file, config_current, config_default);
 
+#ifdef FOX_CMD_SUPPORT
   /* Create VTY's socket */
   vty_serv_sock (vty_addr, vty_port, RIP_VTYSH_PATH);
+#endif /* FOX_CMD_SUPPORT */
 
   /* Try to return to normal operation. */
 }
@@ -139,8 +144,9 @@ sighup (int sig)
 void
 sigint (int sig)
 {
+#ifdef FOX_RIP_DEBUG
   zlog (NULL, LOG_INFO, "Terminating on signal");
-
+#endif /* FOX_RIP_DEBUG */
   if (! retain_mode)
     rip_clean ();
 
@@ -151,7 +157,9 @@ sigint (int sig)
 void
 sigusr1 (int sig)
 {
+#ifdef FOX_RIP_DEBUG
   zlog_rotate (NULL);
+#endif /* FOX_RIP_DEBUG */
 }
 
 /* Initialization of signal handles. */
@@ -180,9 +188,11 @@ main (int argc, char **argv)
   /* Get program name. */
   progname = ((p = strrchr (argv[0], '/')) ? ++p : argv[0]);
 
+#ifdef FOX_RIP_DEBUG
   /* First of all we need logging init. */
   zlog_default = openzlog (progname, ZLOG_NOLOG, ZLOG_RIP,
 			   LOG_CONS|LOG_NDELAY|LOG_PID, LOG_DAEMON);
+#endif /* FOX_RIP_DEBUG */
 
   /* Command line option parse. */
   while (1) 
@@ -217,7 +227,9 @@ main (int argc, char **argv)
 	  retain_mode = 1;
 	  break;
 	case 'v':
+#ifdef FOX_CMD_SUPPORT
 	  print_version (progname);
+#endif /* FOX_CMD_SUPPORT */
 	  exit (0);
 	  break;
 	case 'h':
@@ -236,14 +248,20 @@ main (int argc, char **argv)
   signal_init ();
   cmd_init (1);
   vty_init ();
+#ifdef FOX_CMD_SUPPORT
   memory_init ();
+#endif /* FOX_CMD_SUPPORT */
+#ifdef FOX_AUTH_SUPPORT
   keychain_init ();
+#endif /* FOX_AUTH_SUPPORT */
 
   /* RIP related initialization. */
   rip_init ();
   rip_if_init ();
   rip_zclient_init ();
+#ifdef FOX_RIP_DEBUG
   rip_peer_init ();
+#endif /* FOX_RIP_DEBUG */
 
   /* Sort all installed commands. */
   sort_node ();
@@ -257,9 +275,10 @@ main (int argc, char **argv)
 
   /* Pid file create. */
   pid_output (pid_file);
-
+#ifdef FOX_CMD_SUPPORT
   /* Create VTY's socket */
   vty_serv_sock (vty_addr, vty_port, RIP_VTYSH_PATH);
+#endif /* BRCM_CMD_SUPPORT */
 
   /* Execute each thread. */
   while (thread_fetch (master, &thread))

@@ -789,13 +789,15 @@ routing_socket ()
 
   if (routing_sock < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't init kernel routing socket");
+#endif /* FOX_RIP_DEBUG */
       return;
     }
-
+#ifdef FOX_RIP_DEBUG
   if (fcntl (routing_sock, F_SETFL, O_NONBLOCK) < 0) 
     zlog_warn ("Can't set O_NONBLOCK to routing socket");
-
+#endif /* FOX_RIP_DEBUG */
   /* kernel_read needs rewrite. */
   thread_add_read (master, kernel_read, NULL, routing_sock);
 }

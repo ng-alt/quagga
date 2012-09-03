@@ -18,6 +18,8 @@ along with GNU Zebra; see the file COPYING.  If not, write to the Free
 Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA.  */
 
+#ifdef FOX_LIST_SUPPORT
+
 #include <zebra.h>
 
 #include "linklist.h"
@@ -1075,3 +1077,4 @@ route_map_init_vty ()
   install_element (RMAP_NODE, &rmap_onmatch_goto_cmd);
   install_element (RMAP_NODE, &no_rmap_onmatch_goto_cmd);
 }
+#endif /* FOX_LIST_SUPPORT */

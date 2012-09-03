@@ -28,6 +28,7 @@
 #include "str.h"
 #include "log.h"
 
+#ifdef FOX_SUPPORT
 #ifndef HAVE_INET_ATON
 int
 inet_aton (const char *cp, struct in_addr *inaddr)
@@ -236,7 +237,9 @@ sockunion_socket (union sockunion *su)
   sock = socket (su->sa.sa_family, SOCK_STREAM, 0);
   if (sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "Can't make socket : %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -371,8 +374,10 @@ sockunion_connect (int fd, union sockunion *peersu, unsigned short port,
     {
       if (errno != EINPROGRESS)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("can't connect to %s fd %d : %s",
 		     sockunion_log (&su), fd, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	  return connect_error;
 	}
     }
@@ -392,10 +397,10 @@ sockunion_stream_socket (union sockunion *su)
     su->sa.sa_family = AF_INET_UNION;
 
   sock = socket (su->sa.sa_family, SOCK_STREAM, 0);
-
+#ifdef FOX_RIP_DEBUG
   if (sock < 0)
     zlog (NULL, LOG_WARNING, "can't make socket sockunion_stream_socket");
-
+#endif /* FOX_RIP_DEBUG */
   return sock;
 }
 
@@ -438,11 +443,13 @@ sockunion_bind (int sock, union sockunion *su, unsigned short port,
   
 
   ret = bind (sock, (struct sockaddr *)su, size);
+#ifdef FOX_RIP_DEBUG
   if (ret < 0)
     zlog (NULL, LOG_WARNING, "can't bind socket : %s", strerror (errno));
-
+#endif /* FOX_RIP_DEBUG */
   return ret;
 }
+#endif /* FOX_SUPPORT */
 
 int
 sockopt_reuseaddr (int sock)
@@ -454,7 +461,9 @@ sockopt_reuseaddr (int sock)
 		    (void *) &on, sizeof (on));
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "can't set sockopt SO_REUSEADDR to socket %d", sock);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
   return 0;
@@ -471,7 +480,9 @@ sockopt_reuseport (int sock)
 		    (void *) &on, sizeof (on));
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "can't set sockopt SO_REUSEADDR to socket %d", sock);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
   return 0;
@@ -484,6 +495,7 @@ sockopt_reuseport (int sock)
 }
 #endif /* 0 */
 
+#ifdef FOX_SUPPORT
 int
 sockopt_ttl (int family, int sock, int ttl)
 {
@@ -496,7 +508,9 @@ sockopt_ttl (int family, int sock, int ttl)
 			(void *) &ttl, sizeof (int));
       if (ret < 0)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_WARNING, "can't set sockopt IP_TTL %d to socket %d", ttl, sock);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
       return 0;
@@ -509,8 +523,10 @@ sockopt_ttl (int family, int sock, int ttl)
 			(void *) &ttl, sizeof (int));
       if (ret < 0)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_WARNING, "can't set sockopt IPV6_UNICAST_HOPS %d to socket %d",
 		    ttl, sock);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
       return 0;
@@ -570,8 +586,10 @@ sockunion_getsockname (int fd)
   ret = getsockname (fd, (struct sockaddr *)&name, &len);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't get local address and port by getsockname: %s",
 		 strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return NULL;
     }
 
@@ -624,8 +642,10 @@ sockunion_getpeername (int fd)
   ret = getpeername (fd, (struct sockaddr *)&name, &len);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "Can't get remote address and port: %s",
 	    strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return NULL;
     }
 
@@ -754,3 +774,5 @@ sockunion_free (union sockunion *su)
 {
   XFREE (MTYPE_SOCKUNION, su);
 }
+
+#endif /* FOX_SUPPORT */

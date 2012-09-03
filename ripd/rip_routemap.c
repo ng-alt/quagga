@@ -18,6 +18,7 @@
  * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+#ifdef FOX_LIST_SUPPORT
 
 #include <zebra.h>
 
@@ -870,6 +871,7 @@ rip_route_map_init ()
   route_map_install_set (&route_set_metric_cmd);
   route_map_install_set (&route_set_ip_nexthop_cmd);
 
+#ifdef FOX_CMD_SUPPORT
   install_element (RMAP_NODE, &match_metric_cmd);
   install_element (RMAP_NODE, &no_match_metric_cmd);
   install_element (RMAP_NODE, &no_match_metric_val_cmd);
@@ -895,4 +897,6 @@ rip_route_map_init ()
   install_element (RMAP_NODE, &set_ip_nexthop_cmd);
   install_element (RMAP_NODE, &no_set_ip_nexthop_cmd);
   install_element (RMAP_NODE, &no_set_ip_nexthop_val_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }
+#endif /* FOX_LIST_SUPPORT */

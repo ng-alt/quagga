@@ -19,6 +19,7 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA. 
  */
+#if defined(BRCM_CMD_SUPPORT) || defined(BRCM_RIP_DEBUG)
 
 #include <zebra.h>
 
@@ -566,3 +567,5 @@ buffer_flush_window (struct buffer *b, int fd, int width, int height,
 
   return buffer_flush_vty (b, fd, size, erase, no_more);
 }
+
+#endif /* (BRCM_CMD_SUPPORT) || defined(BRCM_RIP_DEBUG) */

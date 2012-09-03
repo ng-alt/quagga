@@ -19,6 +19,8 @@
  * 02111-1307, USA.  
  */
 
+#ifdef FOX_RIP_DEBUG
+
 #include <zebra.h>
 #include "command.h"
 #include "ripd/rip_debug.h"
@@ -267,7 +269,9 @@ rip_debug_init ()
 
   install_node (&debug_node, config_write_debug);
 
+#ifdef FOX_CMD_SUPPORT
   install_element (ENABLE_NODE, &show_debugging_rip_cmd);
+#endif /* FOX_CMD_SUPPORT */
   install_element (ENABLE_NODE, &debug_rip_events_cmd);
   install_element (ENABLE_NODE, &debug_rip_packet_cmd);
   install_element (ENABLE_NODE, &debug_rip_packet_direct_cmd);
@@ -288,3 +292,4 @@ rip_debug_init ()
   install_element (CONFIG_NODE, &no_debug_rip_packet_direct_cmd);
   install_element (CONFIG_NODE, &no_debug_rip_zebra_cmd);
 }
+#endif /* FOX_RIP_DEBUG */

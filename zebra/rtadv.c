@@ -19,6 +19,7 @@
  * 02111-1307, USA.  
  */
 
+#if defined (HAVE_IPV6) && defined (RTADV)
 #include <zebra.h>
 
 #include "memory.h"
@@ -34,7 +35,7 @@
 #include "zebra/rtadv.h"
 #include "zebra/debug.h"
 
-#if defined (HAVE_IPV6) && defined (RTADV)
+//#if defined (HAVE_IPV6) && defined (RTADV)
 
 /* If RFC2133 definition is used. */
 #ifndef IPV6_JOIN_GROUP
@@ -1042,6 +1043,7 @@ rtadv_init ()
   rtadv = rtadv_new ();
   rtadv->sock = sock;
 
+#ifdef FOX_CMD_SUPPORT
   install_element (INTERFACE_NODE, &ipv6_nd_suppress_ra_cmd);
   install_element (INTERFACE_NODE, &no_ipv6_nd_suppress_ra_cmd);
   install_element (INTERFACE_NODE, &ipv6_nd_send_ra_cmd);
@@ -1059,6 +1061,7 @@ rtadv_init ()
   install_element (INTERFACE_NODE, &ipv6_nd_prefix_advertisement_cmd);
   install_element (INTERFACE_NODE, &ipv6_nd_prefix_advertisement_no_val_cmd);
   install_element (INTERFACE_NODE, &no_ipv6_nd_prefix_advertisement_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }
 
 int

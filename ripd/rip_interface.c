@@ -77,9 +77,10 @@ ipv4_multicast_join (int sock,
 				   ifindex); 
 
   if (ret < 0) 
+#ifdef FOX_RIP_DEBUG
     zlog (NULL, LOG_INFO, "can't setsockopt IP_ADD_MEMBERSHIP %s",
 	  strerror (errno));
-
+#endif /* FOX_RIP_DEBUG */
   return ret;
 }
 
@@ -99,7 +100,9 @@ ipv4_multicast_leave (int sock,
 				   ifindex);
 
   if (ret < 0) 
+#ifdef FOX_RIP_DEBUG
     zlog (NULL, LOG_INFO, "can't setsockopt IP_DROP_MEMBERSHIP");
+#endif /* FOX_RIP_DEBUG */
 
   return ret;
 }
@@ -115,8 +118,12 @@ rip_interface_new ()
 
   /* Default authentication type is simple password for Cisco
      compatibility. */
+#if !defined(FOX_AUTH_SUPPORT)
+  ri->auth_type = RIP_NO_AUTH; 
+#else
   /* ri->auth_type = RIP_NO_AUTH; */
   ri->auth_type = RIP_AUTH_SIMPLE_PASSWORD;
+#endif /* FOX_AUTH_SUPPORT */
 
   /* Set default split-horizon behavior.  If the interface is Frame
      Relay or SMDS is enabled, the default value for split-horizon is
@@ -152,7 +159,9 @@ rip_interface_multicast_set (int sock, struct interface *ifp)
 	  if (setsockopt_multicast_ipv4 (sock, IP_MULTICAST_IF,
 					 addr, 0, ifp->ifindex) < 0) 
 	    {
+#ifdef FOX_RIP_DEBUG
 	      zlog_warn ("Can't setsockopt IP_MULTICAST_IF to fd %d", sock);
+#endif /* FOX_RIP_DEBUG */
 	      return;
 	    }
 
@@ -177,7 +186,9 @@ rip_interface_multicast_set (int sock, struct interface *ifp)
 		      sizeof (struct sockaddr_in));
 	  if (ret < 0)
 	    {
+#ifdef FOX_RIP_DEBUG
 	      zlog_warn ("Can't bind socket: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	      return;
 	    }
 
@@ -196,10 +207,10 @@ rip_request_interface_send (struct interface *ifp, u_char version)
   /* RIPv2 support multicast. */
   if (version == RIPv2 && if_is_multicast (ifp))
     {
-      
+#ifdef FOX_RIP_DEBUG      
       if (IS_RIP_DEBUG_EVENT)
 	zlog_info ("multicast request on %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
       rip_request_send (NULL, ifp, version);
       return;
     }
@@ -208,10 +219,10 @@ rip_request_interface_send (struct interface *ifp, u_char version)
   if (if_is_pointopoint (ifp) || if_is_broadcast (ifp))
     {
       listnode cnode;
-
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_EVENT)
 	zlog_info ("broadcast request to %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
       for (cnode = listhead (ifp->connected); cnode; nextnode (cnode))
 	{
 	  struct prefix_ipv4 *p;
@@ -259,6 +270,9 @@ rip_request_interface (struct interface *ifp)
      use rip's version setting. */
   if (ri->ri_send == RI_RIP_UNSPEC)
     {
+        /* add start, water, 01/14/2008*/
+        return;
+        /* add end, water, 01/14/2008*/
       if (rip->version == RIPv1)
 	rip_request_interface_send (ifp, RIPv1);
       else
@@ -274,6 +288,7 @@ rip_request_interface (struct interface *ifp)
     }
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* Send RIP request to the neighbor. */
 void
 rip_request_neighbor (struct in_addr addr)
@@ -296,14 +311,16 @@ rip_request_neighbor_all ()
   if (! rip)
     return;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_EVENT)
     zlog_info ("request to the all neighbor");
-
+#endif /* FOX_RIP_DEBUG */
   /* Send request to all neighbor. */
   for (rp = route_top (rip->neighbor); rp; rp = route_next (rp))
     if (rp->info)
       rip_request_neighbor (rp->p.u.prefix4);
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Multicast packet receive socket. */
 int
@@ -313,9 +330,10 @@ rip_multicast_join (struct interface *ifp, int sock)
 
   if (if_is_up (ifp) && if_is_multicast (ifp))
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_EVENT)
 	zlog_info ("multicast join at %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
       for (cnode = listhead (ifp->connected); cnode; nextnode (cnode))
 	{
 	  struct prefix_ipv4 *p;
@@ -346,9 +364,10 @@ rip_multicast_leave (struct interface *ifp, int sock)
 
   if (if_is_up (ifp) && if_is_multicast (ifp))
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_EVENT)
 	zlog_info ("multicast leave from %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
       for (cnode = listhead (ifp->connected); cnode; nextnode (cnode))
 	{
 	  struct prefix_ipv4 *p;
@@ -509,11 +528,11 @@ rip_interface_down (int command, struct zclient *zclient, zebra_size_t length)
     return 0;
 
   rip_if_down(ifp);
- 
+#ifdef FOX_RIP_DEBUG 
   if (IS_RIP_DEBUG_ZEBRA)
     zlog_info ("interface %s index %d flags %ld metric %d mtu %d is down",
 	       ifp->name, ifp->ifindex, ifp->flags, ifp->metric, ifp->mtu);
-
+#endif /* FOX_RIP_DEBUG */
   return 0;
 }
 
@@ -530,10 +549,11 @@ rip_interface_up (int command, struct zclient *zclient, zebra_size_t length)
   if (ifp == NULL)
     return 0;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_ZEBRA)
     zlog_info ("interface %s index %d flags %ld metric %d mtu %d is up",
 	       ifp->name, ifp->ifindex, ifp->flags, ifp->metric, ifp->mtu);
-
+#endif /* FOX_RIP_DEBUG */
   /* Check if this interface is RIP enabled or not.*/
   rip_enable_apply (ifp);
  
@@ -554,10 +574,11 @@ rip_interface_add (int command, struct zclient *zclient, zebra_size_t length)
 
   ifp = zebra_interface_add_read (zclient->ibuf);
 
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_ZEBRA)
     zlog_info ("interface add %s index %d flags %ld metric %d mtu %d",
 	       ifp->name, ifp->ifindex, ifp->flags, ifp->metric, ifp->mtu);
-
+#endif
   /* Check if this interface is RIP enabled or not.*/
   rip_enable_apply (ifp);
 
@@ -587,10 +608,10 @@ rip_interface_delete (int command, struct zclient *zclient,
   if (if_is_up (ifp)) {
     rip_if_down(ifp);
   } 
-  
+#ifdef FOX_RIP_DEBUG  
   zlog_info("interface delete %s index %d flags %ld metric %d mtu %d",
 	    ifp->name, ifp->ifindex, ifp->flags, ifp->metric, ifp->mtu);  
-  
+#endif  /* FOX_RIP_DEBUG */
   /* To support pseudo interface do not free interface structure.  */
   /* if_delete(ifp); */
 
@@ -640,8 +661,12 @@ rip_interface_reset ()
       ri->ri_send = RI_RIP_UNSPEC;
       ri->ri_receive = RI_RIP_UNSPEC;
 
+#if !defined(FOX_AUTH_SUPPORT)
+      ri->auth_type = RIP_NO_AUTH;
+#else
       /* ri->auth_type = RIP_NO_AUTH; */
       ri->auth_type = RIP_AUTH_SIMPLE_PASSWORD;
+#endif /* FOX_AUTH_SUPPORT */
 
       if (ri->auth_str)
 	{
@@ -654,8 +679,10 @@ rip_interface_reset ()
 	  ri->key_chain = NULL;
 	}
 
-      ri->split_horizon = 0;
-      ri->split_horizon_default = 0;
+      /* brcm - bug fix, split_horizon is default to 1 to begin with, after reset, it should 
+         remain 1; not 0. */
+      ri->split_horizon = 1;
+      ri->split_horizon_default = 1;
 
       ri->list[RIP_FILTER_IN] = NULL;
       ri->list[RIP_FILTER_OUT] = NULL;
@@ -718,9 +745,10 @@ rip_if_down(struct interface *ifp)
   
   if (ri->running)
    {
+#ifdef FOX_RIP_DEBUG
      if (IS_RIP_DEBUG_EVENT)
        zlog_info ("turn off %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
      /* Leave from multicast group. */
      rip_multicast_leave (ifp, rip->sock);
 
@@ -760,10 +788,11 @@ rip_interface_address_add (int command, struct zclient *zclient,
 
   if (p->family == AF_INET)
     {
+#ifdef BRCM_RIP_DEBUG
       if (IS_RIP_DEBUG_ZEBRA)
 	zlog_info ("connected address %s/%d is added", 
 		   inet_ntoa (p->u.prefix4), p->prefixlen);
-      
+#endif /* FOX_RIP_DEBUG */
       /* Check is this interface is RIP enabled or not.*/
       rip_enable_apply (ifc->ifp);
 
@@ -789,10 +818,12 @@ rip_interface_address_delete (int command, struct zclient *zclient,
       p = ifc->address;
       if (p->family == AF_INET)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_ZEBRA)
 
 	    zlog_info ("connected address %s/%d is deleted",
 		       inet_ntoa (p->u.prefix4), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 
 #ifdef HAVE_SNMP
 	  rip_ifaddr_delete (ifc->ifp, ifc);
@@ -947,7 +978,9 @@ rip_interface_wakeup (struct thread *t)
   /* Join to multicast group. */
   if (rip_multicast_join (ifp, rip->sock) < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_err ("multicast join failed, interface %s not running", ifp->name);
+#endif /* FOX_RIP_DEBUG */
       return 0;
     }
 
@@ -1041,9 +1074,10 @@ rip_enable_apply (struct interface *ifp)
     {
       if (! ri->running)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_EVENT)
 	    zlog_info ("turn on %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
 	  /* Add interface wake up thread. */
 	  if (! ri->t_wakeup)
 	    ri->t_wakeup = thread_add_timer (master, rip_interface_wakeup,
@@ -1055,9 +1089,10 @@ rip_enable_apply (struct interface *ifp)
     {
       if (ri->running)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_EVENT)
 	    zlog_info ("turn off %s", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
 	  /* Might as well clean up the route table as well */ 
 	  rip_if_down(ifp);
 
@@ -1101,7 +1136,7 @@ rip_neighbor_lookup (struct sockaddr_in *from)
     }
   return 0;
 }
-
+#ifdef FOX_CMD_SUPPORT
 /* Add new RIP neighbor to the neighbor tree. */
 int
 rip_neighbor_add (struct prefix_ipv4 *p)
@@ -1139,6 +1174,7 @@ rip_neighbor_delete (struct prefix_ipv4 *p)
 
   return 0;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Clear all network and neighbor configuration. */
 void
@@ -1317,6 +1353,7 @@ DEFUN (no_rip_network,
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* RIP neighbor configuration set. */
 DEFUN (rip_neighbor,
        rip_neighbor_cmd,
@@ -1363,6 +1400,7 @@ DEFUN (no_rip_neighbor,
   
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 DEFUN (ip_rip_receive_version,
        ip_rip_receive_version_cmd,
@@ -1568,6 +1606,7 @@ ALIAS (no_ip_rip_send_version,
        "Version 1\n"
        "Version 2\n")
 
+#if defined(FOX_AUTH_SUPPORT) && defined(FOX_CMD_SUPPORT)
 DEFUN (ip_rip_authentication_mode,
        ip_rip_authentication_mode_cmd,
        "ip rip authentication mode (md5|text)",
@@ -1612,9 +1651,12 @@ DEFUN (no_ip_rip_authentication_mode,
   ifp = (struct interface *)vty->index;
   ri = ifp->info;
 
+#if !defined(FOX_AUTH_SUPPORT)
+  ri->auth_type = RIP_NO_AUTH;
+#else
   /* ri->auth_type = RIP_NO_AUTH; */
   ri->auth_type = RIP_AUTH_SIMPLE_PASSWORD;
-
+#endif /* FOX_AUTH_SUPPORT */
   return CMD_SUCCESS;
 }
 
@@ -1760,7 +1802,9 @@ ALIAS (no_ip_rip_authentication_key_chain,
        "Authentication control\n"
        "Authentication key-chain\n"
        "name of key-chain\n")
+#endif /* defined(FOX_AUTH_SUPPORT) && defined(FOX_CMD_SUPPORT) */
 
+#ifdef FOX_CMD_SUPPORT
 DEFUN (rip_split_horizon,
        rip_split_horizon_cmd,
        "ip split-horizon",
@@ -1793,6 +1837,7 @@ DEFUN (no_rip_split_horizon,
   ri->split_horizon = 0;
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 DEFUN (rip_passive_interface,
        rip_passive_interface_cmd,
@@ -1817,6 +1862,7 @@ DEFUN (no_rip_passive_interface,
 int
 rip_interface_config_write (struct vty *vty)
 {
+#ifdef FOX_CMD_SUPPORT
   listnode node;
   struct interface *ifp;
 
@@ -1845,14 +1891,18 @@ rip_interface_config_write (struct vty *vty)
 
       /* RIP version setting. */
       if (ri->ri_send != RI_RIP_UNSPEC)
+#ifdef FOX_RIP_DEBUG
 	vty_out (vty, " ip rip send version %s%s",
 		 lookup (ri_version_msg, ri->ri_send),
 		 VTY_NEWLINE);
+#endif /* FOX_RIP_DEBUG */
 
       if (ri->ri_receive != RI_RIP_UNSPEC)
+#ifdef FOX_RIP_DEBUG
 	vty_out (vty, " ip rip receive version %s%s",
 		 lookup (ri_version_msg, ri->ri_receive),
 		 VTY_NEWLINE);
+#endif /* FOX_RIP_DEBUG */
 
       /* RIP authentication. */
 #if 0 
@@ -1873,12 +1923,14 @@ rip_interface_config_write (struct vty *vty)
 
       vty_out (vty, "!%s", VTY_NEWLINE);
     }
+#endif /* FOX_CMD_SUPPORT */
   return 0;
 }
 
 int
 config_write_rip_network (struct vty *vty, int config_mode)
 {
+#ifdef FOX_CMD_SUPPORT
   int i;
   char *ifname;
   struct route_node *node;
@@ -1913,6 +1965,7 @@ config_write_rip_network (struct vty *vty, int config_mode)
     for (i = 0; i < vector_max (Vrip_passive_interface); i++)
       if ((ifname = vector_slot (Vrip_passive_interface, i)) != NULL)
 	vty_out (vty, " passive-interface %s%s", ifname, VTY_NEWLINE);
+#endif /* FOX_CMD_SUPPORT */
 
   return 0;
 }
@@ -1962,12 +2015,18 @@ rip_if_init ()
   /* Install commands. */
   install_element (CONFIG_NODE, &interface_cmd);
   install_default (INTERFACE_NODE);
+#ifdef FOX_CMD_SUPPORT
   install_element (INTERFACE_NODE, &interface_desc_cmd);
   install_element (INTERFACE_NODE, &no_interface_desc_cmd);
+#endif /* FOX_CMD_SUPPORT */
+
   install_element (RIP_NODE, &rip_network_cmd);
   install_element (RIP_NODE, &no_rip_network_cmd);
+
+#ifdef FOX_CMD_SUPPORT
   install_element (RIP_NODE, &rip_neighbor_cmd);
   install_element (RIP_NODE, &no_rip_neighbor_cmd);
+#endif /* FOX_CMD_SUPPORT */
 
   install_element (RIP_NODE, &rip_passive_interface_cmd);
   install_element (RIP_NODE, &no_rip_passive_interface_cmd);
@@ -1984,6 +2043,7 @@ rip_if_init ()
   install_element (INTERFACE_NODE, &no_ip_rip_receive_version_cmd);
   install_element (INTERFACE_NODE, &no_ip_rip_receive_version_num_cmd);
 
+#if defined(FOX_CMD_SUPPORT) && defined(FOX_AUTH_SUPPORT)
   install_element (INTERFACE_NODE, &ip_rip_authentication_mode_cmd);
   install_element (INTERFACE_NODE, &no_ip_rip_authentication_mode_cmd);
   install_element (INTERFACE_NODE, &no_ip_rip_authentication_mode_type_cmd);
@@ -1998,4 +2058,5 @@ rip_if_init ()
 
   install_element (INTERFACE_NODE, &rip_split_horizon_cmd);
   install_element (INTERFACE_NODE, &no_rip_split_horizon_cmd);
+#endif /* FOX_CMD_SUPPORT && FOX_AUTH_SUPPORT */
 }

@@ -39,6 +39,7 @@ static u_char maskbit[] = {0x00, 0x80, 0xc0, 0xe0, 0xf0,
 
 #define MASKBIT(offset)  ((0xff << (PNBBY - (offset))) & 0xff)
 
+#ifdef FOX_SUPPORT
 /* Address Famiy Identifier to Address Family converter. */
 int
 afi2family (int afi)
@@ -63,6 +64,7 @@ family2afi (int family)
 #endif /* HAVE_IPV6 */
   return 0;
 }
+#endif /* FOX_SUPPORT */
 
 /* If n includes p prefix then return 1 else return 0. */
 int
@@ -112,8 +114,10 @@ prefix_copy (struct prefix *dest, struct prefix *src)
     }
   else
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_INFO, "prefix_copy(): Unknown address family %d",
 	      src->family);
+#endif /* FOX_RIP_DEBUG */
       assert (0);
     }
 }
@@ -135,7 +139,7 @@ prefix_same (struct prefix *p1, struct prefix *p2)
     }
   return 0;
 }
-
+#ifdef FOX_SUPPORT
 /* When both prefix structure is not same, but will be same after
    applying mask, return 0. otherwise, return 1 */
 int
@@ -164,7 +168,9 @@ prefix_cmp (struct prefix *p1, struct prefix *p2)
 
   return 0;
 }
+#endif
 
+#if defined(FOX_CMD_SUPPORT) || defined(FOX_RIP_DEBUG)
 /* Return prefix family type string. */
 char *
 prefix_family_str (struct prefix *p)
@@ -177,6 +183,7 @@ prefix_family_str (struct prefix *p)
 #endif /* HAVE_IPV6 */
   return "unspec";
 }
+#endif /* FOX_SUPPORT */
 
 /* Allocate new prefix_ipv4 structure. */
 struct prefix_ipv4 *
@@ -488,6 +495,8 @@ apply_mask (struct prefix *p)
   return;
 }
 
+#ifdef FOX_SUPPORT
+
 /* Utility function of convert between struct prefix <=> union sockunion */
 struct prefix *
 sockunion2prefix (union sockunion *dest,
@@ -546,6 +555,7 @@ sockunion2hostprefix (union sockunion *su)
 #endif /* HAVE_IPV6 */
   return NULL;
 }
+#endif /* FOX_SUPPORT */
 
 int
 prefix_blen (struct prefix *p)
@@ -564,6 +574,7 @@ prefix_blen (struct prefix *p)
   return 0;
 }
 
+#ifdef FOX_SUPPORT
 /* Generic function for conversion string to struct prefix. */
 int
 str2prefix (char *str, struct prefix *p)
@@ -594,6 +605,7 @@ prefix2str (struct prefix *p, char *str, int size)
   snprintf (str, size, "%s/%d", buf, p->prefixlen);
   return 0;
 }
+#endif /* FOX_SUPPORT */
 
 struct prefix *
 prefix_new ()
@@ -611,6 +623,7 @@ prefix_free (struct prefix *p)
   XFREE (MTYPE_PREFIX, p);
 }
 
+#ifdef FOX_SUPPORT
 /* Utility function.  Check the string only contains digit
    character. */
 int
@@ -621,6 +634,7 @@ all_digit (char *str)
       return 0;
   return 1;
 }
+#endif /* FOX_SUPPORT */
 
 /* Utility function to convert ipv4 prefixes to Classful prefixes */
 void apply_classful_mask_ipv4 (struct prefix_ipv4 *p)
@@ -648,7 +662,7 @@ void apply_classful_mask_ipv4 (struct prefix_ipv4 *p)
       apply_mask_ipv4(p);
     }
 }
-
+#ifdef FOX_SUPPORT 
 /* Utility function to convert ipv4 netmask to prefixes 
    ex.) "1.1.0.0" "255.255.0.0" => "1.1.0.0/16"
    ex.) "1.0.0.0" NULL => "1.0.0.0/8"                   */
@@ -694,3 +708,4 @@ netmask_str2prefix_str (char *net_str, char *mask_str, char *prefix_str)
   return 1;
 }
 
+#endif /* FOX_SUPPORT */

@@ -19,6 +19,8 @@
  * 02111-1307, USA.  
  */
 
+#ifdef FOX_LIST_SUPPORT
+
 #include <zebra.h>
 
 #include "hash.h"
@@ -303,3 +305,4 @@ if_rmap_init (int node)
   install_element (node, &if_rmap_cmd);
   install_element (node, &no_if_rmap_cmd);
 }
+#endif /* FOX_LIST_SUPPORT */

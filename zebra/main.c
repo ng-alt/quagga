@@ -29,12 +29,16 @@
 #include "filter.h"
 #include "memory.h"
 #include "prefix.h"
+#ifdef FOX_RIP_DEBUG
 #include "log.h"
-
+#endif /* FOX_RIP_DEBUG */
 #include "zebra/rib.h"
 #include "zebra/zserv.h"
+#ifdef FOX_RIP_DEBUG
 #include "zebra/debug.h"
+#endif /* FOX_RIP_DEBUG */
 #include "zebra/rib.h"
+
 
 /* Master of threads. */
 struct thread_master *master;
@@ -106,8 +110,9 @@ Report bugs to %s\n", progname, ZEBRA_BUG_ADDRESS);
 void 
 sighup (int sig)
 {
+#ifdef FOX_RIP_DEBUG
   zlog_info ("SIGHUP received");
-
+#endif /* FOX_RIP_DEBUG */
   /* Reload of config file. */
   ;
 }
@@ -118,9 +123,9 @@ sigint (int sig)
 {
   /* Decrared in rib.c */
   void rib_close ();
-
+#ifdef FOX_RIP_DEBUG
   zlog_info ("Terminating on signal");
-
+#endif /* FOX_RIP_DEBUG */
   if (!retain_mode)
     rib_close ();
 
@@ -131,7 +136,9 @@ sigint (int sig)
 void
 sigusr1 (int sig)
 {
+#ifdef FOX_RIP_DEBUG
   zlog_rotate (NULL);
+#endif /* FOX_RIP_DEBUG */
 }
 
 /* Signale wrapper. */
@@ -181,6 +188,7 @@ main (int argc, char **argv)
   char *progname;
   struct thread thread;
   void rib_weed_tables ();
+  int Mcast_fox=0;
 
   /* Set umask before anything for security */
   umask (0027);
@@ -188,14 +196,15 @@ main (int argc, char **argv)
   /* preserve my name */
   progname = ((p = strrchr (argv[0], '/')) ? ++p : argv[0]);
 
+#ifdef FOX_RIP_DEBUG
   zlog_default = openzlog (progname, ZLOG_STDOUT, ZLOG_ZEBRA,
 			   LOG_CONS|LOG_NDELAY|LOG_PID, LOG_DAEMON);
-
+#endif /* FOX_RIP_DEBUG */
   while (1) 
     {
       int opt;
   
-      opt = getopt_long (argc, argv, "bdklf:hA:P:rv", longopts, 0);
+      opt = getopt_long (argc, argv, "bdklf:hA:P:rvm", longopts, 0);
 
       if (opt == EOF)
 	break;
@@ -231,7 +240,9 @@ main (int argc, char **argv)
 	  retain_mode = 1;
 	  break;
 	case 'v':
+#ifdef FOX_CMD_SUPPORT
 	  print_version (progname);
+#endif /* FOX_RIP_DEBUG */
 	  exit (0);
 	  break;
 	case 'h':
@@ -250,15 +261,25 @@ main (int argc, char **argv)
   signal_init ();
   cmd_init (1);
   vty_init ();
+
+#ifdef FOX_CMD_SUPPORT
   memory_init ();
+#endif /* FOX_CMD_SUPPORT */
 
   /* Zebra related initialize. */
   zebra_init ();
   rib_init ();
   zebra_if_init ();
+
+#ifdef FOX_RIP_DEBUG
   zebra_debug_init ();
+#endif /* FOX_RIP_DEBUG */
+
   access_list_init ();
+
+#ifdef RTADV
   rtadv_init ();
+#endif
 
   /* For debug purpose. */
   /* SET_FLAG (zebra_debug_event, ZEBRA_DEBUG_EVENT); */
@@ -302,9 +323,11 @@ main (int argc, char **argv)
   /* Needed for BSD routing socket. */
   pid = getpid ();
 
+#ifdef FOX_CMD_SUPPORT
   /* Make vty server socket. */
   vty_serv_sock (vty_addr,
 		 vty_port ? vty_port : ZEBRA_VTY_PORT, ZEBRA_VTYSH_PATH);
+#endif /* FOX_CMD_SUPPORT */
 
   while (thread_fetch (master, &thread))
     thread_call (&thread);

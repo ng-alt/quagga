@@ -19,6 +19,8 @@
  * 02111-1307, USA.  
  */
 
+#ifdef FOX_LIST_SUPPORT
+
 #include <zebra.h>
 
 #include "if.h"
@@ -137,8 +139,10 @@ ifstat_update_proc ()
   fp = fopen (_PATH_PROC_NET_DEV, "r");
   if (fp == NULL)
     {
+#ifdef FOX_RIP_DEBUG    
       zlog_warn ("Can't open proc file %s: %s",
 		 _PATH_PROC_NET_DEV, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -178,8 +182,10 @@ interface_list_proc ()
   fp = fopen (_PATH_PROC_NET_DEV, "r");
   if (fp == NULL)
     {
+#ifdef FOX_RIP_DEBUG    
       zlog_warn ("Can't open proc file %s: %s",
 		 _PATH_PROC_NET_DEV, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -220,8 +226,10 @@ ifaddr_proc_ipv6 ()
   fp = fopen (_PATH_PROC_NET_IF_INET6, "r");
   if (fp == NULL)
     {
+#ifdef FOX_RIP_DEBUG    
       zlog_warn ("Can't open proc file %s: %s",
 		 _PATH_PROC_NET_IF_INET6, strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
   
@@ -244,3 +252,5 @@ ifaddr_proc_ipv6 ()
   return 0;
 }
 #endif /* HAVE_IPV6 && HAVE_PROC_NET_IF_INET6 */
+
+#endif /* BRCM_LIST_SUPPORT */

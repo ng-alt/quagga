@@ -30,7 +30,9 @@
 #include "memory.h"
 #include "ioctl.h"
 #include "connected.h"
+#ifdef FOX_RIP_DEBUG
 #include "log.h"
+#endif /* FOX_RIP_DEBUG */
 #include "zclient.h"
 
 #include "zebra/interface.h"
@@ -38,8 +40,12 @@
 #include "zebra/rib.h"
 #include "zebra/zserv.h"
 #include "zebra/redistribute.h"
+#ifdef FOX_RIP_DEBUG
 #include "zebra/debug.h"
+#endif /* FOX_RIP_DEBUG */
 
+
+#ifdef FOX_CMD_SUPPORT
 /* Allocate a new internal interface index 
  * This works done from the top so that %d macros
  * print a - sign! 
@@ -60,6 +66,7 @@ if_new_intern_ifindex (void)
        return ifindex;
     }
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Called when new interface is added. */
 int
@@ -139,8 +146,10 @@ if_addr_wakeup (struct interface *ifp)
 	      ret = if_set_prefix (ifp, ifc);
 	      if (ret < 0)
 		{
+#ifdef FOX_RIP_DEBUG
 		  zlog_warn ("Can't set interface's address: %s", 
 			     strerror(errno));
+#endif /* FOX_RIP_DEBUG */
 		  continue;
 		}
 	      SET_FLAG (ifc->conf, ZEBRA_IFC_REAL);
@@ -162,8 +171,10 @@ if_addr_wakeup (struct interface *ifp)
 	      ret = if_prefix_add_ipv6 (ifp, ifc);
 	      if (ret < 0)
 		{
+#ifdef FOX_RIP_DEBUG
 		  zlog_warn ("Can't set interface's address: %s", 
 			     strerror(errno));
+#endif /* FOX_RIP_DEBUG */
 		  continue;
 		}
 	      SET_FLAG (ifc->conf, ZEBRA_IFC_REAL);
@@ -189,15 +200,18 @@ if_add_update (struct interface *ifp)
       SET_FLAG (ifp->status, ZEBRA_INTERFACE_ACTIVE);
 
       if_addr_wakeup (ifp);
-
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	zlog_info ("interface %s index %d becomes active.", 
 		   ifp->name, ifp->ifindex);
+#endif /* FOX_RIP_DEBUG */
     }
   else
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_KERNEL)
 	zlog_info ("interface %s index %d is added.", ifp->name, ifp->ifindex);
+#endif /* FOX_RIP_DEBUG */
     }
 }
 
@@ -212,17 +226,21 @@ if_delete_update (struct interface *ifp)
 
   if (if_is_up(ifp))
     {
+#ifdef FOX_RIP_DEBUG
       zlog_err ("interface %s index %d is still up while being deleted.",
 	    ifp->name, ifp->ifindex);
+#endif /* FOX_RIP_DEBUG */
       return;
     }
 
   /* Mark interface as inactive */
   UNSET_FLAG (ifp->status, ZEBRA_INTERFACE_ACTIVE);
   
+#ifdef FOX_RIP_DEBUG  
   if (IS_ZEBRA_DEBUG_KERNEL)
     zlog_info ("interface %s index %d is now inactive.",
 	       ifp->name, ifp->ifindex);
+#endif /* FOX_RIP_DEBUG */
 
   /* Delete connected routes from the kernel. */
   if (ifp->connected)
@@ -340,6 +358,7 @@ if_refresh (struct interface *ifp)
     }
 }
 
+#ifdef FOX_CMD_SUPPORT
 /* Printout flag information into vty */
 void
 if_flag_dump_vty (struct vty *vty, unsigned long flag)
@@ -1341,6 +1360,7 @@ if_config_write (struct vty *vty)
     }
   return 0;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Allocate and initialize interface vector. */
 void
@@ -1351,6 +1371,7 @@ zebra_if_init ()
   if_add_hook (IF_NEW_HOOK, if_zebra_new_hook);
   if_add_hook (IF_DELETE_HOOK, if_zebra_delete_hook);
   
+#ifdef FOX_CMD_SUPPORT  
   /* Install configuration write function. */
   install_node (&interface_node, if_config_write);
 
@@ -1384,4 +1405,5 @@ zebra_if_init ()
   install_element (INTERFACE_NODE, &no_ip_address_secondary_cmd);
   install_element (INTERFACE_NODE, &no_ip_address_label_cmd);
 #endif /* HAVE_NETLINK */
+#endif /* FOX_CMD_SUPPORT */
 }

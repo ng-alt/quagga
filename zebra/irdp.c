@@ -559,6 +559,7 @@ DEFUN (ip_irdp_address_preference,
 void
 irdp_init ()
 {
+#ifdef FOX_CMD_SUPPORT
   install_element (INTERFACE_NODE, &ip_irdp_cmd);
   install_element (INTERFACE_NODE, &ip_irdp_multicast_cmd);
   install_element (INTERFACE_NODE, &ip_irdp_holdtime_cmd);
@@ -566,4 +567,5 @@ irdp_init ()
   install_element (INTERFACE_NODE, &ip_irdp_minadvertinterval_cmd);
   install_element (INTERFACE_NODE, &ip_irdp_preference_cmd);
   install_element (INTERFACE_NODE, &ip_irdp_address_preference_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }

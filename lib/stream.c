@@ -60,6 +60,7 @@ stream_free (struct stream *s)
   XFREE (MTYPE_STREAM_DATA, s->data);
   XFREE (MTYPE_STREAM, s);
 }
+#ifdef FOX_SUPPORT
 
 unsigned long
 stream_get_getp (struct stream *s)
@@ -72,13 +73,13 @@ stream_get_putp (struct stream *s)
 {
   return s->putp;
 }
-
+#endif /* FOX_SUPPORT */
 unsigned long
 stream_get_endp (struct stream *s)
 {
   return s->endp;
 }
-
+#ifdef FOX_SUPPORT
 unsigned long
 stream_get_size (struct stream *s)
 {
@@ -97,7 +98,7 @@ stream_set_putp (struct stream *s, unsigned long pos)
 {
   s->putp = pos;
 }
-
+#endif /* FOX_SUPPORT */
 /* Forward pointer. */
 void
 stream_forward (struct stream *s, int size)
@@ -124,6 +125,7 @@ stream_getc (struct stream *s)
   return c;
 }
 
+#ifdef FOX_SUPPORT
 /* Get next character from the stream. */
 u_char
 stream_getc_from (struct stream *s, unsigned long from)
@@ -133,7 +135,7 @@ stream_getc_from (struct stream *s, unsigned long from)
   c = s->data[from];
   return c;
 }
-
+#endif /* FOX_SUPPORT */
 /* Get next word from the stream. */
 u_int16_t
 stream_getw (struct stream *s)
@@ -145,6 +147,7 @@ stream_getw (struct stream *s)
   return w;
 }
 
+#ifdef FOX_SUPPORT
 /* Get next word from the stream. */
 u_int16_t
 stream_getw_from (struct stream *s, unsigned long from)
@@ -155,6 +158,7 @@ stream_getw_from (struct stream *s, unsigned long from)
   w |= s->data[from];
   return w;
 }
+#endif /* FOX_SUPPORT */
 
 /* Get next long word from the stream. */
 u_int32_t
@@ -255,7 +259,7 @@ stream_putw_at (struct stream *s, unsigned long putp, u_int16_t w)
   s->data[putp + 1] = (u_char) w;
   return 2;
 }
-
+#ifdef FOX_SUPPORT
 int
 stream_putl_at (struct stream *s, unsigned long putp, u_int32_t l)
 {
@@ -265,7 +269,7 @@ stream_putl_at (struct stream *s, unsigned long putp, u_int32_t l)
   s->data[putp + 3] = (u_char)l;
   return 4;
 }
-
+#endif /* FOX_SUPPORT */
 /* Put long word to the stream. */
 int
 stream_put_ipv4 (struct stream *s, u_int32_t l)
@@ -296,6 +300,7 @@ stream_put_in_addr (struct stream *s, struct in_addr *addr)
   return 4;
 }
 
+#ifdef FOX_SUPPORT
 /* Put prefix by nlri type format. */
 int
 stream_put_prefix (struct stream *s, struct prefix *p)
@@ -315,6 +320,7 @@ stream_put_prefix (struct stream *s, struct prefix *p)
 
   return psize;
 }
+#endif /* FOX_SUPPORT */
 
 /* Read size from fd. */
 int
@@ -331,7 +337,7 @@ stream_read (struct stream *s, int fd, size_t size)
     }
   return nbytes;
 }
-
+#ifdef FOX_SUPPORT
 /* Read size from fd. */
 int
 stream_read_unblock (struct stream *s, int fd, size_t size)
@@ -351,7 +357,7 @@ stream_read_unblock (struct stream *s, int fd, size_t size)
     }
   return nbytes;
 }
-
+#endif /* FOX_SUPPORT */
 /* Write data to buffer. */
 int
 stream_write (struct stream *s, u_char *ptr, size_t size)
@@ -365,7 +371,7 @@ stream_write (struct stream *s, u_char *ptr, size_t size)
     s->endp = s->putp;
   return size;
 }
-
+#ifdef FOX_SUPPORT
 /* Return current read pointer. */
 u_char *
 stream_pnt (struct stream *s)
@@ -382,7 +388,7 @@ stream_empty (struct stream *s)
   else
     return 0;
 }
-
+#endif /* FOX_SUPPORT */
 /* Reset stream. */
 void
 stream_reset (struct stream *s)
@@ -403,6 +409,7 @@ stream_flush (struct stream *s, int fd)
   return nbytes;
 }
 
+#ifdef FOX_SUPPORT
 /* Stream first in first out queue. */
 
 struct stream_fifo *
@@ -477,3 +484,5 @@ stream_fifo_free (struct stream_fifo *fifo)
   stream_fifo_clean (fifo);
   XFREE (MTYPE_STREAM_FIFO, fifo);
 }
+
+#endif /* FOX_SUPPORT */

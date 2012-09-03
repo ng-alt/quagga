@@ -19,6 +19,8 @@
  * 02111-1307, USA.  
  */
 
+#ifdef FOX_LIST_SUPPORT
+
 #include <zebra.h>
 
 #include "if.h"
@@ -358,10 +360,12 @@ rip_offset_init ()
   rip_offset_list_master->cmp = (int (*)(void *, void *)) offset_list_cmp;
   rip_offset_list_master->del = (void (*)(void *)) offset_list_del;
 
+#ifdef FOX_CMD_SUPPORT
   install_element (RIP_NODE, &rip_offset_list_cmd);
   install_element (RIP_NODE, &rip_offset_list_ifname_cmd);
   install_element (RIP_NODE, &no_rip_offset_list_cmd);
   install_element (RIP_NODE, &no_rip_offset_list_ifname_cmd);
+#endif /* FOX_CMD_SUPPORT */
 }
 
 void
@@ -412,3 +416,5 @@ config_write_rip_offset_list (struct vty *vty)
 
   return 0;
 }
+
+#endif /* FOX_LIST_SUPPORT */

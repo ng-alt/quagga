@@ -61,8 +61,10 @@ static unsigned long vty_timeout_val = VTY_TIMEOUT_DEFAULT;
 /* Vty access-class command */
 static char *vty_accesslist_name = NULL;
 
+#ifdef HAVE_IPV6
 /* Vty access-calss for IPv6. */
 static char *vty_ipv6_accesslist_name = NULL;
+#endif
 
 /* VTY server thread. */
 vector Vvty_serv_thread;
@@ -81,6 +83,8 @@ char integrate_default[] = SYSCONFDIR INTEGRATE_DEFAULT_CONFIG;
 
 
 /* VTY standard output function. */
+
+#if defined(FOX_CMD_SUPPORT)
 int
 vty_out (struct vty *vty, const char *format, ...)
 {
@@ -139,7 +143,15 @@ vty_out (struct vty *vty, const char *format, ...)
 
   return len;
 }
+#else /* FOX_CMD_SUPPORT */
+int
+vty_out (struct vty *vty, const char *format, ...)
+{
+  return 1;
+}
+#endif /* FOX_CMD_SUPPORT */
 
+#if defined(FOX_RIP_DEBUG) || defined(FOX_CMD_SUPPORT)
 int
 vvty_out (struct vty *vty, const char *format, va_list va)
 {
@@ -151,14 +163,18 @@ vvty_out (struct vty *vty, const char *format, va_list va)
 
   if (len < 0)
     {    
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_INFO, "Vty closed due to vty output buffer shortage.");
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
   buffer_write (vty->obuf, (u_char *)buf, len);
   return len;
 }
+#endif /* defined(FOX_RIP_DEBUG) || defined(FOX_CMD_SUPPORT) */
 
+#if defined(FOX_CMD_SUPPORT) || defined(FOX_RIP_DEBUG)
 /* Output current time to the vty. */
 void
 vty_time_print (struct vty *vty, int cr)
@@ -175,7 +191,9 @@ vty_time_print (struct vty *vty, int cr)
   ret = strftime (buf, TIME_BUF, "%Y/%m/%d %H:%M:%S", tm);
   if (ret == 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_INFO, "strftime error");
+#endif /* FOX_RIP_DEBUG */
       return;
     }
   if (cr)
@@ -185,7 +203,9 @@ vty_time_print (struct vty *vty, int cr)
 
   return;
 }
+#endif /* (FOX_CMD_SUPPORT) || defined(BRCM_RIP_DEBUG) */
 
+#if defined(FOX_CMD_SUPPORT)
 /* Say hello to vty interface. */
 void
 vty_hello (struct vty *vty)
@@ -254,6 +274,7 @@ vty_dont_lflow_ahead (struct vty *vty)
   vty_out (vty, "%s", cmd);
 }
 #endif /* 0 */
+#endif /* FOX_CMD_SUPPORT */
 
 /* Allocate new vty struct. */
 struct vty *
@@ -261,7 +282,9 @@ vty_new ()
 {
   struct vty *new = XCALLOC (MTYPE_VTY, sizeof (struct vty));
 
+#if defined(FOX_CMD_SUPPORT)
   new->obuf = (struct buffer *) buffer_new (100);
+#endif /* FOX_CMD_SUPPORT */
   new->buf = XCALLOC (MTYPE_VTY, VTY_BUFSIZ);
   new->max = VTY_BUFSIZ;
   new->sb_buffer = NULL;
@@ -269,6 +292,7 @@ vty_new ()
   return new;
 }
 
+#if defined(FOX_CMD_SUPPORT)
 /* Authentication of vty */
 static void
 vty_auth (struct vty *vty, char *buf)
@@ -1634,7 +1658,9 @@ vty_accept (struct thread *thread)
   vty_sock = sockunion_accept (accept_sock, &su);
   if (vty_sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("can't accept vty socket : %s", strerror (errno));
+#endif
       return -1;
     }
 
@@ -1647,8 +1673,10 @@ vty_accept (struct thread *thread)
 	  (access_list_apply (acl, p) == FILTER_DENY))
 	{
 	  char *buf;
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_INFO, "Vty connection refused from %s",
 		(buf = sockunion_su2str (&su)));
+#endif /* FOX_RIP_DEBUG */
 	  free (buf);
 	  close (vty_sock);
 	  
@@ -1669,8 +1697,10 @@ vty_accept (struct thread *thread)
 	  (access_list_apply (acl, p) == FILTER_DENY))
 	{
 	  char *buf;
+#ifdef FOX_RIP_DEBUG
 	  zlog (NULL, LOG_INFO, "Vty connection refused from %s",
 		(buf = sockunion_su2str (&su)));
+#endif /* FOX_RIP_DEBUG */
 	  free (buf);
 	  close (vty_sock);
 	  
@@ -1689,10 +1719,11 @@ vty_accept (struct thread *thread)
   on = 1;
   ret = setsockopt (vty_sock, IPPROTO_TCP, TCP_NODELAY, 
 		    (char *) &on, sizeof (on));
+#ifdef FOX_RIP_DEBUG
   if (ret < 0)
     zlog (NULL, LOG_INFO, "can't set sockopt to vty_sock : %s", 
 	  strerror (errno));
-
+#endif /* FOX_RIP_DEBUG */
   vty = vty_create (vty_sock, &su);
 
   return 0;
@@ -1796,7 +1827,9 @@ vty_serv_sock_family (unsigned short port, int family)
   ret = listen (accept_sock, 3);
   if (ret < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "can't listen socket");
+#endif
       close (accept_sock);	/* Avoid sd leak. */
       return;
     }
@@ -1885,7 +1918,9 @@ vtysh_accept (struct thread *thread)
 
   if (sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("can't accept vty socket : %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -1978,6 +2013,7 @@ vty_serv_sock (const char *hostname, unsigned short port, char *path)
   vty_serv_un (path);
 #endif /* VTYSH */
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Close vty interface. */
 void
@@ -1985,6 +2021,7 @@ vty_close (struct vty *vty)
 {
   int i;
 
+#if defined(FOX_CMD_SUPPORT)
   /* Cancel threads.*/
   if (vty->t_read)
     thread_cancel (vty->t_read);
@@ -2005,6 +2042,7 @@ vty_close (struct vty *vty)
   /* Free SB buffer. */
   if (vty->sb_buffer)
     buffer_free (vty->sb_buffer);
+#endif /* FOX_CMD_SUPPORT */
 
   /* Free command history. */
   for (i = 0; i < VTY_MAXHIST; i++)
@@ -2030,6 +2068,7 @@ vty_close (struct vty *vty)
   XFREE (MTYPE_VTY, vty);
 }
 
+#if defined(FOX_CMD_SUPPORT)
 /* When time out occur output message then close connection. */
 static int
 vty_timeout (struct thread *thread)
@@ -2050,6 +2089,8 @@ vty_timeout (struct thread *thread)
 
   return 0;
 }
+#endif /* FOX_CMD_SUPPORT */
+
 
 /* Read up configuration file from file_name. */
 static void
@@ -2086,6 +2127,7 @@ vty_read_file (FILE *confp)
   vty_close (vty);
 }
 
+#if defined(FOX_CMD_SUPPORT)
 FILE *
 vty_use_backup_config (char *fullpath)
 {
@@ -2141,6 +2183,7 @@ vty_use_backup_config (char *fullpath)
   free (fullpath_tmp);
   return fopen (fullpath, "r");
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Read up configuration file from file_name. */
 void
@@ -2169,6 +2212,7 @@ vty_read_config (char *config_file,
 
       if (confp == NULL)
 	{
+#if defined(FOX_CMD_SUPPORT)
 	  confp = vty_use_backup_config (fullpath);
 	  if (confp)
 	    fprintf (stderr, "WARNING: using backup configuration file!\n");
@@ -2176,8 +2220,11 @@ vty_read_config (char *config_file,
 	    {
 	      fprintf (stderr, "can't open configuration file [%s]\n", 
 		       config_file);
+#endif /* FOX_CMD_SUPPORT */
 	      exit(1);
+#if defined(FOX_CMD_SUPPORT)
 	    }
+#endif /* FOX_CMD_SUPPORT */
 	}
     }
   else
@@ -2186,12 +2233,14 @@ vty_read_config (char *config_file,
       if (config_current_dir)
 	{
 	  confp = fopen (config_current_dir, "r");
+#if defined(FOX_CMD_SUPPORT)
 	  if (confp == NULL)
 	    {
 	      confp = vty_use_backup_config (config_current_dir);
 	      if (confp)
 		fprintf (stderr, "WARNING: using backup configuration file!\n");
 	    }
+#endif /* FOX_CMD_SUPPORT */
 	}
 
       /* If there is no relative path exists, open system default file. */
@@ -2223,6 +2272,7 @@ vty_read_config (char *config_file,
 	    }
 #endif /* VTYSH */
 
+#if defined(FOX_CMD_SUPPORT)
 	  confp = fopen (config_default_dir, "r");
 	  if (confp == NULL)
 	    {
@@ -2241,6 +2291,7 @@ vty_read_config (char *config_file,
 	    }      
 	  else
 	    fullpath = config_default_dir;
+#endif /* FOX_CMD_SUPPORT */
 	}
       else
 	{
@@ -2258,6 +2309,7 @@ vty_read_config (char *config_file,
   host_config_set (fullpath);
 }
 
+#if defined(FOX_CMD_SUPPORT) || defined(FOX_RIP_DEBUG)
 /* Small utility function which output loggin to the VTY. */
 void
 vty_log (const char *proto_str, const char *format, va_list va)
@@ -2275,6 +2327,7 @@ vty_log (const char *proto_str, const char *format, va_list va)
 	  vty_out (vty, "\r\n");
 	}
 }
+#endif /* FOX_CMD_SUPPORT || FOX_RIP_DEBUG */
 
 int
 vty_config_lock (struct vty *vty)
@@ -2302,6 +2355,7 @@ vty_config_unlock (struct vty *vty)
 extern struct thread_master *master;
 /* struct thread_master *master; */
 
+#if defined(FOX_CMD_SUPPORT)
 static void
 vty_event (enum event event, int sock, struct vty *vty)
 {
@@ -2607,9 +2661,11 @@ vty_config_write (struct vty *vty)
     vty_out (vty, " access-class %s%s",
 	     vty_accesslist_name, VTY_NEWLINE);
 
+#ifdef HAVE_IPV6
   if (vty_ipv6_accesslist_name)
     vty_out (vty, " ipv6 access-class %s%s",
 	     vty_ipv6_accesslist_name, VTY_NEWLINE);
+#endif /* HAVE_IPV6 */
 
   /* exec-timeout */
   if (vty_timeout_val != VTY_TIMEOUT_DEFAULT)
@@ -2664,11 +2720,13 @@ vty_reset ()
       vty_accesslist_name = NULL;
     }
 
+#ifdef FOX_LIST_SUPPORT
   if (vty_ipv6_accesslist_name)
     {
       XFREE(MTYPE_VTY, vty_ipv6_accesslist_name);
       vty_ipv6_accesslist_name = NULL;
     }
+#endif /* FOX_LIST_SUPPORT */
 }
 
 /* for ospf6d easy temprary reload function */
@@ -2703,12 +2761,13 @@ vty_finish ()
       XFREE(MTYPE_VTY, vty_accesslist_name);
       vty_accesslist_name = NULL;
     }
-
+#ifdef FOX_LIST_SUPPORT
   if (vty_ipv6_accesslist_name)
     {
       XFREE(MTYPE_VTY, vty_ipv6_accesslist_name);
       vty_ipv6_accesslist_name = NULL;
     }
+#endif /* FOX_LIST_SUPPORT */
 }
 
 void
@@ -2745,19 +2804,23 @@ vty_init_vtysh ()
 {
   vtyvec = vector_init (VECTOR_MIN_SIZE);
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* Install vty's own commands like `who' command. */
 void
 vty_init ()
 {
   /* For further configuration read, preserve current directory. */
+#if defined(FOX_CMD_SUPPORT)
   vty_save_cwd ();
+#endif /* FOX_CMD_SUPPORT */
 
   vtyvec = vector_init (VECTOR_MIN_SIZE);
 
   /* Initilize server thread vector. */
   Vvty_serv_thread = vector_init (VECTOR_MIN_SIZE);
 
+#if defined(FOX_CMD_SUPPORT)
   /* Install bgp top node. */
   install_node (&vty_node, vty_config_write);
 
@@ -2784,4 +2847,5 @@ vty_init ()
   install_element (VTY_NODE, &vty_ipv6_access_class_cmd);
   install_element (VTY_NODE, &no_vty_ipv6_access_class_cmd);
 #endif /* HAVE_IPV6 */
+#endif /* FOX_CMD_SUPPORT */
 }

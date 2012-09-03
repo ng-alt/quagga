@@ -96,6 +96,90 @@ struct
   { ZEBRA_ROUTE_BGP,     "B", "bgp"}
 };
 
+/*  added start by EricHuang, 11/05/2007 */
+//#ifdef U12H072
+/*  mark start by aspen Bai, 07/17/2008 */
+//#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
+/*  mark end by aspen Bai, 07/17/2008 */
+#define max_fox_rt_info     32
+
+struct fox_rt_info {
+    int metric;
+    struct in_addr prefix __attribute__ ((aligned (8)));
+};
+
+struct fox_rt_info fox_rt_info_table[max_fox_rt_info];
+
+#include "if.h"
+/*
+void my_log(char *string)
+{
+    FILE *fd;
+    
+    fd = fopen("/tmp/riplog", "a+");
+    
+    if (fd)
+    {
+        fprintf(fd, string);
+        fclose(fd);
+    }
+}
+*/
+
+void fox_get_rtinfo()
+{
+    FILE *fp;
+    char buf[128];
+    char iface[32], dest[9], gate[9], mask[9];
+    int flags, refcnt, use, metric, mtu, window, rtt;
+    int j=0;
+    
+    /* Open /proc filesystem */
+    fp = fopen ("/proc/net/route", "r");
+    if (fp == NULL)
+    {
+      return;
+    }
+    
+    /* Drop first label line. */
+    fgets (buf, 128, fp);
+
+    while (fgets (buf, 128, fp) != NULL)
+    {
+        int n;
+        //char str[128];
+        
+        n = sscanf (buf, "%s %s %s %x %d %d %d %s %d %d %d",
+          iface, dest, gate, &flags, &refcnt, &use, &metric, 
+          mask, &mtu, &window, &rtt);
+        if (n != 11)
+        {	
+          continue;
+        }
+        if (! (flags & RTF_UP))
+            continue;
+        if (! (flags & RTF_GATEWAY))
+            continue;
+
+        sscanf (dest, "%lX", (unsigned long *)&fox_rt_info_table[j].prefix);
+        fox_rt_info_table[j].metric=metric;
+
+        //sprintf(str, "addr: %x, metric: %d\n", fox_rt_info_table[j].prefix, fox_rt_info_table[j].metric);
+        //my_log(str);
+
+        if ( j++ > max_fox_rt_info )
+            break;
+    }
+    
+    if (fp)
+        fclose(fp);
+}
+/*  mark start by aspen Bai, 07/17/2008 */
+//#endif
+/*  mark end by aspen Bai, 07/17/2008 */
+/*  added end by EricHuang, 11/05/2007 */
+
+
 /* Utility function to set boradcast option to the socket. */
 int
 sockopt_broadcast (int sock)
@@ -106,7 +190,9 @@ sockopt_broadcast (int sock)
   ret = setsockopt (sock, SOL_SOCKET, SO_BROADCAST, (char *) &on, sizeof on);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("can't set sockopt SO_BROADCAST to socket %d", sock);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
   return 0;
@@ -216,23 +302,29 @@ rip_incoming_filter (struct prefix_ipv4 *p, struct rip_interface *ri)
       if (access_list_apply (ri->list[RIP_FILTER_IN], 
 			     (struct prefix *) p) == FILTER_DENY)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_PACKET)
 	    zlog_info ("%s/%d filtered by distribute in",
 		       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
     }
+#ifdef FOX_LIST_SUPPORT
   if (ri->prefix[RIP_FILTER_IN])
     {
       if (prefix_list_apply (ri->prefix[RIP_FILTER_IN], 
 			     (struct prefix *) p) == PREFIX_DENY)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_PACKET)
 	    zlog_info ("%s/%d filtered by prefix-list in",
 		       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
     }
+#endif /* FOX_LIST_SUPPORT */
 
   /* All interface filter check. */
   dist = distribute_lookup (NULL);
@@ -247,13 +339,16 @@ rip_incoming_filter (struct prefix_ipv4 *p, struct rip_interface *ri)
 	      if (access_list_apply (alist,
 				     (struct prefix *) p) == FILTER_DENY)
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_PACKET)
 		    zlog_info ("%s/%d filtered by distribute in",
 			       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
 	    }
 	}
+#ifdef FOX_LIST_SUPPORT	  
       if (dist->prefix[DISTRIBUTE_IN])
 	{
 	  plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_IN]);
@@ -263,13 +358,16 @@ rip_incoming_filter (struct prefix_ipv4 *p, struct rip_interface *ri)
 	      if (prefix_list_apply (plist,
 				     (struct prefix *) p) == PREFIX_DENY)
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_PACKET)
 		    zlog_info ("%s/%d filtered by prefix-list in",
 			       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
 	    }
 	}
+#endif /* FOX_LIST_SUPPORT */
     }
   return 0;
 }
@@ -286,23 +384,29 @@ rip_outgoing_filter (struct prefix_ipv4 *p, struct rip_interface *ri)
       if (access_list_apply (ri->list[RIP_FILTER_OUT],
 			     (struct prefix *) p) == FILTER_DENY)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_PACKET)
 	    zlog_info ("%s/%d is filtered by distribute out",
 		       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
     }
+#ifdef FOX_LIST_SUPPORT  
   if (ri->prefix[RIP_FILTER_OUT])
     {
       if (prefix_list_apply (ri->prefix[RIP_FILTER_OUT],
 			     (struct prefix *) p) == PREFIX_DENY)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_PACKET)
 	    zlog_info ("%s/%d is filtered by prefix-list out",
 		       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
     }
+#endif /* FOX_LIST_SUPPORT */
 
   /* All interface filter check. */
   dist = distribute_lookup (NULL);
@@ -317,13 +421,16 @@ rip_outgoing_filter (struct prefix_ipv4 *p, struct rip_interface *ri)
 	      if (access_list_apply (alist,
 				     (struct prefix *) p) == FILTER_DENY)
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_PACKET)
 		    zlog_info ("%s/%d filtered by distribute out",
 			       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
 	    }
 	}
+#ifdef FOX_LIST_SUPPORT	  
       if (dist->prefix[DISTRIBUTE_OUT])
 	{
 	  plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_OUT]);
@@ -333,13 +440,16 @@ rip_outgoing_filter (struct prefix_ipv4 *p, struct rip_interface *ri)
 	      if (prefix_list_apply (plist,
 				     (struct prefix *) p) == PREFIX_DENY)
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_PACKET)
 		    zlog_info ("%s/%d filtered by prefix-list out",
 			       inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
 	    }
 	}
+#endif /* FOX_LIST_SUPPORT */
     }
   return 0;
 }
@@ -409,8 +519,9 @@ rip_rte_process (struct rte *rte, struct sockaddr_in *from,
      arrived. If the result is greater than infinity, use infinity
      (RFC2453 Sec. 3.9.2) */
   /* Zebra ripd can handle offset-list in. */
+#ifdef FOX_LIST_SUPPORT
   ret = rip_offset_list_apply_in (&p, ifp, &rte->metric);
-
+#endif /* FOX_LIST_SUPPORT */
   /* If offset-list does not modify the metric use interface's
      metric. */
   if (! ret)
@@ -428,8 +539,10 @@ rip_rte_process (struct rte *rte, struct sockaddr_in *from,
   /* Check nexthop address. */
   if (rip_nexthop_check (nexthop) < 0)
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_PACKET)
 	zlog_info ("Nexthop address %s is invalid", inet_ntoa (*nexthop));
+#endif /* FOX_RIP_DEBUG */
       return;
     }
 
@@ -616,6 +729,7 @@ rip_rte_process (struct rte *rte, struct sockaddr_in *from,
     }
 }
 
+#ifdef FOX_RIP_DEBUG
 /* Dump RIP packet */
 void
 rip_packet_dump (struct rip_packet *packet, int size, char *sndrcv)
@@ -633,9 +747,11 @@ rip_packet_dump (struct rip_packet *packet, int size, char *sndrcv)
   else
     command_str = "unknown";
 
+#ifdef FOX_RIP_DEBUG
   /* Dump packet header. */
   zlog_info ("%s %s version %d packet size %d",
 	     sndrcv, command_str, packet->version, size);
+#endif /* FOX_RIP_DEBUG */
 
   /* Dump each routing table entry. */
   rte = packet->rte;
@@ -651,9 +767,10 @@ rip_packet_dump (struct rip_packet *packet, int size, char *sndrcv)
 	      if (ntohs (rte->tag) == RIP_AUTH_SIMPLE_PASSWORD)
 		{
 		  p = (u_char *)&rte->prefix;
-
+#ifdef FOX_RIP_DEBUG
 		  zlog_info ("  family 0x%X type %d auth string: %s",
 			     ntohs (rte->family), ntohs (rte->tag), p);
+#endif /* FOX_RIP_DEBUG */
 		}
 	      else if (ntohs (rte->tag) == RIP_AUTH_MD5)
 		{
@@ -661,46 +778,58 @@ rip_packet_dump (struct rip_packet *packet, int size, char *sndrcv)
 
 		  md5 = (struct rip_md5_info *) &packet->rte;
 
+#ifdef FOX_RIP_DEBUG
 		  zlog_info ("  family 0x%X type %d (MD5 authentication)",
 			     ntohs (md5->family), ntohs (md5->type));
 		  zlog_info ("    RIP-2 packet len %d Key ID %d"
 			     " Auth Data len %d", ntohs (md5->packet_len),
 			     md5->keyid, md5->auth_len);
 		  zlog_info ("    Sequence Number %ld", (u_long)ntohl (md5->sequence));
+#endif /* FOX_RIP_DEBUG */		  
 		}
 	      else if (ntohs (rte->tag) == RIP_AUTH_DATA)
 		{
 		  p = (u_char *)&rte->prefix;
 
+#ifdef FOX_RIP_DEBUG
 		  zlog_info ("  family 0x%X type %d (MD5 data)",
 			     ntohs (rte->family), ntohs (rte->tag));
 		  zlog_info ("    MD5: %02X%02X%02X%02X%02X%02X%02X%02X"
 			     "%02X%02X%02X%02X%02X%02X%02X",
 			     p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],
 			     p[9],p[10],p[11],p[12],p[13],p[14],p[15]);
+#endif /* FOX_RIP_DEBUG */
 		}
 	      else
 		{
+#ifdef FOX_RIP_DEBUG		
 		  zlog_info ("  family 0x%X type %d (Unknown auth type)",
 			     ntohs (rte->family), ntohs (rte->tag));
+#endif /* FOX_RIP_DEBUG */
 		}
             }
-	  else
+	  else{
+#ifdef FOX_RIP_DEBUG
 	    zlog_info ("  %s/%d -> %s family %d tag %d metric %ld",
 		       inet_ntop (AF_INET, &rte->prefix, pbuf, BUFSIZ),netmask,
 		       inet_ntop (AF_INET, &rte->nexthop, nbuf, BUFSIZ),
 		       ntohs (rte->family), ntohs (rte->tag), 
 		       (u_long)ntohl (rte->metric));
+#endif
+              }
 	}
       else
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("  %s family %d tag %d metric %ld", 
 		     inet_ntop (AF_INET, &rte->prefix, pbuf, BUFSIZ),
 		     ntohs (rte->family), ntohs (rte->tag),
 		     (u_long)ntohl (rte->metric));
+#endif
 	}
     }
 }
+#endif /* FOX_RIP_DEBUG */
 
 /* Check if the destination address is valid (unicast; not net 0
    or 127) (RFC2453 Section 3.9.2 - Page 26).  But we don't
@@ -731,6 +860,7 @@ rip_destination_check (struct in_addr addr)
   return 0;
 }
 
+#ifdef FOX_AUTH_SUPPORT
 /* RIP version 2 authentication. */
 int
 rip_auth_simple_password (struct rte *rte, struct sockaddr_in *from,
@@ -739,10 +869,11 @@ rip_auth_simple_password (struct rte *rte, struct sockaddr_in *from,
   struct rip_interface *ri;
   char *auth_str;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_EVENT)
     zlog_info ("RIPv2 simple password authentication from %s",
 	       inet_ntoa (from->sin_addr));
-
+#endif /* FOX_RIP_DEBUG */
   ri = ifp->info;
 
   if (ri->auth_type != RIP_AUTH_SIMPLE_PASSWORD
@@ -789,8 +920,10 @@ rip_auth_md5 (struct rip_packet *packet, struct sockaddr_in *from,
   u_int16_t packet_len;
   char *auth_str = NULL;
   
+#ifdef FOX_RIP_DEBUG  
   if (IS_RIP_DEBUG_EVENT)
     zlog_info ("RIPv2 MD5 authentication from %s", inet_ntoa (from->sin_addr));
+#endif /* FOX_RIP_DEBUG */
 
   ri = ifp->info;
   md5 = (struct rip_md5_info *) &packet->rte;
@@ -888,7 +1021,9 @@ rip_auth_md5_set (struct stream *s, struct interface *ifp)
   /* Check packet length. */
   if (len < (RIP_HEADER_SIZE + RIP_RTE_SIZE))
     {
+#ifdef FOX_RIP_DEBUG
       zlog_err ("rip_auth_md5_set(): packet length %ld is less than minimum length.", len);
+#endif /* FOX_RIP_DEBUG */
       return;
     }
 
@@ -947,6 +1082,7 @@ rip_auth_md5_set (struct stream *s, struct interface *ifp)
   /* Copy the digest to the packet. */
   stream_write (s, digest, RIP_AUTH_MD5_SIZE);
 }
+#endif /* FOX_AUTH_SUPPORT */
 
 /* RIP routing information. */
 void
@@ -960,9 +1096,11 @@ rip_response_process (struct rip_packet *packet, int size,
      port. (RFC2453 - Sec. 3.9.2)*/
   if (ntohs (from->sin_port) != RIP_PORT_DEFAULT) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("response doesn't come from RIP port: %d",
 		 from->sin_port);
       rip_peer_bad_packet (from);
+#endif /* FOX_RIP_DEBUG */
       return;
     }
 
@@ -971,9 +1109,11 @@ rip_response_process (struct rip_packet *packet, int size,
      datagram must be on a directly connected network  */
   if (! if_valid_neighbor (from->sin_addr)) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("This datagram doesn't came from a valid neighbor: %s",
 		 inet_ntoa (from->sin_addr));
       rip_peer_bad_packet (from);
+#endif /* FOX_RIP_DEBUG */
       return;
     }
 
@@ -982,8 +1122,10 @@ rip_response_process (struct rip_packet *packet, int size,
 
   ; /* Alredy done in rip_read () */
 
+#ifdef FOX_RIP_DEBUG
   /* Update RIP peer. */
   rip_peer_update (from, packet->version);
+#endif /* FOX_RIP_DEBUG */
 
   /* Set RTE pointer. */
   rte = packet->rte;
@@ -1004,8 +1146,10 @@ rip_response_process (struct rip_packet *packet, int size,
       if (ntohs (rte->family) != AF_INET)
 	{
 	  /* Address family check.  RIP only supports AF_INET. */
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("Unsupported family %d from %s.",
 		     ntohs (rte->family), inet_ntoa (from->sin_addr));
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
 
@@ -1013,8 +1157,10 @@ rip_response_process (struct rip_packet *packet, int size,
          or 127) */
       if (! rip_destination_check (rte->prefix))
         {
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("Network is net 0 or net 127 or it is not unicast network");
 	  rip_peer_bad_route (from);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	} 
 
@@ -1024,17 +1170,21 @@ rip_response_process (struct rip_packet *packet, int size,
       /* - is the metric valid (i.e., between 1 and 16, inclusive) */
       if (! (rte->metric >= 1 && rte->metric <= 16))
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("Route's metric is not in the 1-16 range.");
 	  rip_peer_bad_route (from);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
 
       /* RIPv1 does not have nexthop value. */
       if (packet->version == RIPv1 && rte->nexthop.s_addr != 0)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("RIPv1 packet with nexthop value %s",
 		     inet_ntoa (rte->nexthop));
 	  rip_peer_bad_route (from);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
 
@@ -1050,8 +1200,10 @@ rip_response_process (struct rip_packet *packet, int size,
 	  addrval = ntohl (rte->nexthop.s_addr);
 	  if (IN_CLASSD (addrval))
 	    {
+#ifdef FOX_RIP_DEBUG
 	      zlog_info ("Nexthop %s is multicast address, skip this rte",
 			 inet_ntoa (rte->nexthop));
+#endif /* FOX_RIP_DEBUG */
 	      continue;
 	    }
 
@@ -1069,14 +1221,18 @@ rip_response_process (struct rip_packet *packet, int size,
 		  if (rinfo->type == ZEBRA_ROUTE_RIP
 		      && rinfo->sub_type == RIP_ROUTE_RTE)
 		    {
+#ifdef FOX_RIP_DEBUG
 		      if (IS_RIP_DEBUG_EVENT)
 			zlog_info ("Next hop %s is on RIP network.  Set nexthop to the packet's originator", inet_ntoa (rte->nexthop));
+#endif /* FOX_RIP_DEBUG */
 		      rte->nexthop = rinfo->from;
 		    }
 		  else
 		    {
+#ifdef FOX_RIP_DEBUG
 		      if (IS_RIP_DEBUG_EVENT)
 			zlog_info ("Next hop %s is not directly reachable. Treat it as 0.0.0.0", inet_ntoa (rte->nexthop));
+#endif /* FOX_RIP_DEBUG */
 		      rte->nexthop.s_addr = 0;
 		    }
 
@@ -1084,8 +1240,10 @@ rip_response_process (struct rip_packet *packet, int size,
 		}
 	      else
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_EVENT)
 		    zlog_info ("Next hop %s is not directly reachable. Treat it as 0.0.0.0", inet_ntoa (rte->nexthop));
+#endif /* FOX_RIP_DEBUG */
 		  rte->nexthop.s_addr = 0;
 		}
 
@@ -1134,9 +1292,11 @@ rip_response_process (struct rip_packet *packet, int size,
 	  && (rte->mask.s_addr != 0) 
 	  && ((rte->prefix.s_addr & rte->mask.s_addr) != rte->prefix.s_addr))
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_warn ("RIPv2 address %s is not mask /%d applied one",
 		     inet_ntoa (rte->prefix), ip_masklen (rte->mask));
 	  rip_peer_bad_route (from);
+#endif /* FOX_RIP_DEBUG */
 	  continue;
 	}
 
@@ -1145,8 +1305,10 @@ rip_response_process (struct rip_packet *packet, int size,
 	  && (rte->prefix.s_addr == 0)
 	  && (rte->mask.s_addr != 0))
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_EVENT)
 	    zlog_info ("Default route with non-zero netmask.  Set zero to netmask");
+#endif /* FOX_RIP_DEBUG */
 	  rte->mask.s_addr = 0;
 	}
 	  
@@ -1194,15 +1356,27 @@ rip_send_packet (caddr_t buf, int size, struct sockaddr_in *to,
       rip_interface_multicast_set (sock, ifp);
     }
 
+  /*  wklin added start, 04/14/2007 */
+  {
+    int ttl = 1;
+    setsockopt (sock, IPPROTO_IP, IP_TTL, (void *) &ttl, sizeof (int));
+  }
+  /*  wklin added end, 04/14/2007 */
   ret = sendto (sock, buf, size, 0, (struct sockaddr *)&sin,
 		sizeof (struct sockaddr_in));
 
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_EVENT)
       zlog_info ("SEND to socket %d port %d addr %s",
                  sock, ntohs (sin.sin_port), inet_ntoa(sin.sin_addr));
 
   if (ret < 0)
     zlog_warn ("can't send packet : %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
+
+  if (ret < 0)
+    printf("can't send packet : %s", strerror (errno));
+
 
   if (! to)
     close (sock);
@@ -1258,7 +1432,7 @@ rip_redistribute_add (int type, int sub_type, struct prefix_ipv4 *p,
       rp->info = NULL;
       rip_info_free (rinfo);
       
-      route_unlock_node (rp);      
+      route_unlock_node (rp);
     }
 
   rinfo = rip_info_new ();
@@ -1333,8 +1507,10 @@ rip_request_process (struct rip_packet *packet, int size,
   if (ri->passive)
     return;
 
+#ifdef FOX_RIP_DEBUG
   /* RIP peer update. */
   rip_peer_update (from, packet->version);
+#endif /* FOX_RIP_DEBUG */
 
   lim = ((caddr_t) packet) + size;
   rte = packet->rte;
@@ -1400,7 +1576,9 @@ setsockopt_pktinfo (int sock)
     
   ret = setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &val, sizeof(val));
   if (ret < 0)
+#ifdef FOX_RIP_DEBUG
     zlog_warn ("Can't setsockopt IP_PKTINFO : %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
   return ret;
 }
 
@@ -1458,7 +1636,9 @@ rip_read_new (struct thread *t)
   ret = rip_recvmsg (sock, buf, RIP_PACKET_MAXSIZ, &from, (int *)&ifindex);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't read RIP packet: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return ret;
     }
 
@@ -1495,15 +1675,19 @@ rip_read (struct thread *t)
 		  (struct sockaddr *) &from, &fromlen);
   if (len < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("recvfrom failed: %s", strerror (errno));
+#endif #endif /* FOX_RIP_DEBUG */
       return len;
     }
 
   /* Check is this packet comming from myself? */
   if (if_check_address (from.sin_addr)) 
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_PACKET)
 	zlog_warn ("ignore packet comes from myself");
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -1511,39 +1695,50 @@ rip_read (struct thread *t)
   ifp = if_lookup_address (from.sin_addr);
 
   /* RIP packet received */
+
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_EVENT)
     zlog_info ("RECV packet from %s port %d on %s",
 	       inet_ntoa (from.sin_addr), ntohs (from.sin_port),
 	       ifp ? ifp->name : "unknown");
+#endif /* FOX_RIP_DEBUG */
 
   /* If this packet come from unknown interface, ignore it. */
   if (ifp == NULL)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("packet comes from unknown interface");
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
   /* Packet length check. */
   if (len < RIP_PACKET_MINSIZ)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("packet size %d is smaller than minimum size %d",
 		 len, RIP_PACKET_MINSIZ);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       return len;
     }
   if (len > RIP_PACKET_MAXSIZ)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("packet size %d is larger than max size %d",
 		 len, RIP_PACKET_MAXSIZ);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       return len;
     }
 
   /* Packet alignment check. */
   if ((len - RIP_PACKET_MINSIZ) % 20)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("packet size %d is wrong for RIP packet alignment", len);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       return len;
     }
 
@@ -1556,14 +1751,18 @@ rip_read (struct thread *t)
   /* RIP version check. */
   if (packet->version == 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("version 0 with command %d received.", packet->command);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
+#ifdef FOX_RIP_DEBUG
   /* Dump RIP packet. */
   if (IS_RIP_DEBUG_RECV)
     rip_packet_dump (packet, len, "RECV");
+#endif /* FOX_RIP_DEBUG */
 
   /* RIP version adjust.  This code should rethink now.  RFC1058 says
      that "Version 1 implementations are to ignore this extra data and
@@ -1576,9 +1775,11 @@ rip_read (struct thread *t)
   ri = ifp->info;
   if (! ri->running && ! rip_neighbor_lookup (&from))
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_EVENT)
 	zlog_info ("RIP is not enabled on interface %s.", ifp->name);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -1589,10 +1790,12 @@ rip_read (struct thread *t)
 	{
 	  if (packet->version != rip->version) 
 	    {
+#ifdef FOX_RIP_DEBUG
 	      if (IS_RIP_DEBUG_PACKET)
 		zlog_warn ("  packet's v%d doesn't fit to my version %d", 
 			   packet->version, rip->version);
 	      rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 	      return -1;
 	    }
 	}
@@ -1601,19 +1804,23 @@ rip_read (struct thread *t)
 	  if (packet->version == RIPv1)
 	    if (! (ri->ri_receive & RIPv1))
 	      {
+#ifdef FOX_RIP_DEBUG
 		if (IS_RIP_DEBUG_PACKET)
 		  zlog_warn ("  packet's v%d doesn't fit to if version spec", 
 			     packet->version);
 		rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 		return -1;
 	      }
 	  if (packet->version == RIPv2)
 	    if (! (ri->ri_receive & RIPv2))
 	      {
+#ifdef FOX_RIP_DEBUG
 		if (IS_RIP_DEBUG_PACKET)
 		  zlog_warn ("  packet's v%d doesn't fit to if version spec", 
 			     packet->version);
 		rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 		return -1;
 	      }
 	}
@@ -1627,10 +1834,12 @@ rip_read (struct thread *t)
       && rtenum 
       && (packet->version == RIPv2) && (packet->rte->family == 0xffff))
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_EVENT)
 	zlog_warn ("packet RIPv%d is dropped because authentication disabled", 
 		   packet->version);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -1643,6 +1852,7 @@ rip_read (struct thread *t)
      authenticated messages will be propagated by RIP-1 routers in an
      unauthenticated manner. */
 
+#ifdef FOX_AUTH_SUPPORT
   if ((ri->auth_type == RIP_AUTH_SIMPLE_PASSWORD 
        || ri->auth_type == RIP_AUTH_MD5)
       && rtenum)
@@ -1650,9 +1860,11 @@ rip_read (struct thread *t)
       /* We follow maximum security. */
       if (packet->version == RIPv1 && packet->rte->family == 0xffff)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_PACKET)
 	    zlog_warn ("packet RIPv%d is dropped because authentication enabled", packet->version);
 	  rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 	  return -1;
 	}
 
@@ -1666,15 +1878,19 @@ rip_read (struct thread *t)
 		  ret = rip_auth_simple_password (packet->rte, &from, ifp);
 		  if (! ret)
 		    {
+#ifdef FOX_RIP_DEBUG
 		      if (IS_RIP_DEBUG_EVENT)
 			zlog_warn ("RIPv2 simple password authentication failed");
 		      rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 		      return -1;
 		    }
 		  else
 		    {
+#ifdef FOX_RIP_DEBUG
 		      if (IS_RIP_DEBUG_EVENT)
 			zlog_info ("RIPv2 simple password authentication success");
+#endif /* FOX_RIP_DEBUG */
 		    }
                 }
 	      else if (ntohs (packet->rte->tag) == RIP_AUTH_MD5)
@@ -1682,25 +1898,31 @@ rip_read (struct thread *t)
 		  ret = rip_auth_md5 (packet, &from, ifp);
 		  if (! ret)
 		    {
+#ifdef FOX_RIP_DEBUG
 		      if (IS_RIP_DEBUG_EVENT)
 			zlog_warn ("RIPv2 MD5 authentication failed");
 		      rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 		      return -1;
 		    }
 		  else
 		    {
+#ifdef FOX_RIP_DEBUG
 		      if (IS_RIP_DEBUG_EVENT)
 			zlog_info ("RIPv2 MD5 authentication success");
+#endif /* FOX_RIP_DEBUG */
 		    }
 		  /* Reset RIP packet length to trim MD5 data. */
 		  len = ret; 
                 }
 	      else
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_EVENT)
 		    zlog_warn ("Unknown authentication type %d",
 			       ntohs (packet->rte->tag));
 		  rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
 	    }
@@ -1709,14 +1931,17 @@ rip_read (struct thread *t)
 	      /* There is no authentication in the packet. */
 	      if (ri->auth_str || ri->key_chain)
 		{
+#ifdef FOX_RIP_DEBUG
 		  if (IS_RIP_DEBUG_EVENT)
 		    zlog_warn ("RIPv2 authentication failed: no authentication in packet");
 		  rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
 		  return -1;
 		}
 	    }
 	}
     }
+#endif /* FOX_AUTH_SUPPORT */
   
   /* Process each command. */
   switch (packet->command)
@@ -1730,18 +1955,24 @@ rip_read (struct thread *t)
       break;
     case RIP_TRACEON:
     case RIP_TRACEOFF:
+#ifdef FOX_RIP_DEBUG
       zlog_info ("Obsolete command %s received, please sent it to routed", 
 		 lookup (rip_msg, packet->command));
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       break;
     case RIP_POLL_ENTRY:
+#ifdef FOX_RIP_DEBUG
       zlog_info ("Obsolete command %s received", 
 		 lookup (rip_msg, packet->command));
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       break;
     default:
+#ifdef FOX_RIP_DEBUG
       zlog_info ("Unknown RIP command %d received", packet->command);
       rip_peer_bad_packet (&from);
+#endif /* FOX_RIP_DEBUG */
       break;
     }
 
@@ -1803,6 +2034,15 @@ rip_write_rte (int num, struct stream *s, struct prefix_ipv4 *p,
 {
   struct in_addr mask;
   struct rip_interface *ri;
+  
+     /*  added start by EricHuang, 11/07/2007 */
+//#ifdef U12H072
+/*  mark start by aspen Bai, 07/17/2008 */
+//#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
+  int i=0;
+//#endif
+/*  mark end by aspen Bai, 07/17/2008 */
+    /*  added end by EricHuang, 11/07/2007 */
 
   /* RIP packet header. */
   if (num == 0)
@@ -1811,6 +2051,7 @@ rip_write_rte (int num, struct stream *s, struct prefix_ipv4 *p,
       stream_putc (s, version);
       stream_putw (s, 0);
 
+#ifdef FOX_AUTH_SUPPORT
       /* In case of we need RIPv2 authentication. */
       if (version == RIPv2 && ifp)
 	{
@@ -1855,7 +2096,33 @@ rip_write_rte (int num, struct stream *s, struct prefix_ipv4 *p,
 		}
 	    }
 	}
+#endif /* FOX_AUTH_SUPPORT */
     }
+
+    /*  added start by EricHuang, 11/07/2007 */
+    /* replace metric value here */
+//#ifdef U12H072
+/*  mark start by aspen Bai, 07/17/2008 */
+//#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
+/*  mark end by aspen Bai, 07/17/2008 */
+    for (i=0; i<max_fox_rt_info; i++)
+    {
+        if ( IPV4_ADDR_SAME (&p->prefix, &fox_rt_info_table[i].prefix) )
+        {
+            //char str[256];
+            //sprintf(str, "SAME: %s, %s\n", inet_ntoa(p->prefix), inet_ntoa(fox_rt_info_table[i].prefix));
+            //my_log(str);
+            if ( fox_rt_info_table[i].metric > 0 )
+            {
+                rinfo->metric_out = fox_rt_info_table[i].metric;
+            }
+            break;
+        }
+    }
+/*  mark start by aspen Bai, 07/17/2008 */
+//#endif
+/*  mark end by aspen Bai, 07/17/2008 */
+    /*  added end by EricHuang, 11/07/2007 */
 
   /* Write routing table entry. */
   if (version == RIPv1)
@@ -1897,6 +2164,7 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
   int num;
   int rtemax;
 
+#ifdef FOX_RIP_DEBUG
   /* Logging output event. */
   if (IS_RIP_DEBUG_EVENT)
     {
@@ -1906,6 +2174,7 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
 	zlog_info ("update routes on interface %s ifindex %d",
 		   ifp->name, ifp->ifindex);
     }
+#endif /* FOX_RIP_DEBUG */
 
   /* Set output stream. */
   s = rip->obuf;
@@ -1918,6 +2187,7 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
   /* Get RIP interface. */
   ri = ifp->info;
     
+#ifdef FOX_AUTH_SUPPORT    
   /* If output interface is in simple password authentication mode, we
      need space for authentication data.  */
   if (ri->auth_type == RIP_AUTH_SIMPLE_PASSWORD)
@@ -1945,6 +2215,7 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
        if (ri->auth_str)
          rtemax -=1;
     }
+#endif /* FOX_AUTH_SUPPORT */
 
   for (rp = route_top (rip->table); rp; rp = route_next (rp))
     if ((rinfo = rp->info) != NULL)
@@ -1958,17 +2229,18 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
 	if (version == RIPv1)
 	  {
 	    memcpy (&classfull, &rp->p, sizeof (struct prefix_ipv4));
-
+#ifdef FOX_RIP_DEBUG
 	    if (IS_RIP_DEBUG_PACKET)
 	      zlog_info("%s/%d before RIPv1 mask check ",
 			inet_ntoa (classfull.prefix), classfull.prefixlen);
-
+#endif /* FOX_RIP_DEBUG */
 	    apply_classful_mask_ipv4 (&classfull);
 	    p = &classfull;
-
+#ifdef FOX_RIP_DEBUG
 	    if (IS_RIP_DEBUG_PACKET)
 	      zlog_info("%s/%d after RIPv1 mask check",
 			inet_ntoa (p->prefix), p->prefixlen);
+#endif
 	  }
 	else 
 	  p = (struct prefix_ipv4 *) &rp->p;
@@ -2014,6 +2286,7 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
 	    && rinfo->ifindex == ifp->ifindex)
 	  rinfo->nexthop_out = rinfo->nexthop;
            
+#ifdef FOX_LIST_SUPPORT           
 	/* Apply route map - continue, if deny */
 	if (rip->route_map[rinfo->type].name
 	    && rinfo->sub_type != RIP_ROUTE_INTERFACE)
@@ -2023,13 +2296,15 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
 
 	    if (ret == RMAP_DENYMATCH) 
 	      {
+#ifdef FOX_RIP_DEBUG
 		if (IS_RIP_DEBUG_PACKET)
 		  zlog_info ("%s/%d is filtered by route-map",
 			     inet_ntoa (p->prefix), p->prefixlen);
+#endif /* FOX_RIP_DEBUG */
 		continue;
 	      }
 	  }
-
+#endif /* FOX_LIST_SUPPORT */
 	/* When route-map does not set metric. */
 	if (! rinfo->metric_set)
 	  {
@@ -2050,26 +2325,29 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
 	      }
 	  }
 
+#ifdef FOX_LIST_SUPPORT
 	/* Apply offset-list */
 	if (rinfo->metric != RIP_METRIC_INFINITY)
 	  rip_offset_list_apply_out (p, ifp, &rinfo->metric_out);
 
 	if (rinfo->metric_out > RIP_METRIC_INFINITY)
 	  rinfo->metric_out = RIP_METRIC_INFINITY;
-	  
+#endif /* FOX_LIST_SUPPORT */
 	/* Write RTE to the stream. */
 	num = rip_write_rte (num, s, p, version, rinfo, to ? NULL : ifp);
 	if (num == rtemax)
 	  {
+#ifdef FOX_AUTH_SUPPORT
 	    if (version == RIPv2 && ri->auth_type == RIP_AUTH_MD5)
 	      rip_auth_md5_set (s, ifp);
-
+#endif /* BRCM_AUTH_SUPPORT */
 	    ret = rip_send_packet (STREAM_DATA (s), stream_get_endp (s),
 				   to, ifp);
-
+#ifdef FOX_RIP_DEBUG
 	    if (ret >= 0 && IS_RIP_DEBUG_SEND)
 	      rip_packet_dump ((struct rip_packet *)STREAM_DATA (s),
 			       stream_get_endp(s), "SEND");
+#endif /* FOX_RIP_DEBUG */
 	    num = 0;
 	    stream_reset (s);
 	  }
@@ -2078,14 +2356,17 @@ rip_output_process (struct interface *ifp, struct sockaddr_in *to,
   /* Flush unwritten RTE. */
   if (num != 0)
     {
+#ifdef FOX_AUTH_SUPPORT
       if (version == RIPv2 && ri->auth_type == RIP_AUTH_MD5)
 	rip_auth_md5_set (s, ifp);
+#endif /* BRCM_AUTH_SUPPORT */
 
       ret = rip_send_packet (STREAM_DATA (s), stream_get_endp (s), to, ifp);
-
+#ifdef FOX_RIP_DEBUG
       if (ret >= 0 && IS_RIP_DEBUG_SEND)
 	rip_packet_dump ((struct rip_packet *)STREAM_DATA (s),
 			 stream_get_endp (s), "SEND");
+#endif /* FOX_RIP_DEBUG */
       num = 0;
       stream_reset (s);
     }
@@ -2106,9 +2387,10 @@ rip_update_interface (struct interface *ifp, u_char version, int route_type)
   /* When RIP version is 2 and multicast enable interface. */
   if (version == RIPv2 && if_is_multicast (ifp)) 
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_RIP_DEBUG_EVENT)
 	zlog_info ("multicast announce on %s ", ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
       rip_output_process (ifp, NULL, route_type, version);
       return;
     }
@@ -2130,12 +2412,12 @@ rip_update_interface (struct interface *ifp, u_char version, int route_type)
 	      memset (&to, 0, sizeof (struct sockaddr_in));
 	      to.sin_addr = p->prefix;
 	      to.sin_port = htons (RIP_PORT_DEFAULT);
-
+#ifdef FOX_RIP_DEBUG
 	      if (IS_RIP_DEBUG_EVENT)
 		zlog_info ("%s announce to %s on %s",
 			   if_is_pointopoint (ifp) ? "unicast" : "broadcast",
 			   inet_ntoa (to.sin_addr), ifp->name);
-
+#endif /* FOX_RIP_DEBUG */
 	      rip_output_process (ifp, &to, route_type, version);
 	    }
 	}
@@ -2174,6 +2456,7 @@ rip_update_process (int route_type)
 
       if (ri->running)
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_RIP_DEBUG_EVENT) 
 	    {
 	      if (ifp->name) 
@@ -2183,7 +2466,7 @@ rip_update_process (int route_type)
 		zlog_info ("SEND UPDATE to _unknown_ ifindex %d",
 			   ifp->ifindex);
 	    }
-
+#endif /* FOX_RIP_DEBUG */
 	  /* If there is no version configuration in the interface,
              use rip's version setting. */
 	  if (ri->ri_send == RI_RIP_UNSPEC)
@@ -2213,8 +2496,10 @@ rip_update_process (int route_type)
 	ifp = if_lookup_address (p->prefix);
 	if (! ifp)
 	  {
+#ifdef FOX_RIP_DEBUG
 	    zlog_warn ("Neighbor %s doesn't exist direct connected network",
 		       inet_ntoa (p->prefix));
+#endif /* FOX_RIP_DEBUG */
 	    continue;
 	  }
 
@@ -2235,8 +2520,10 @@ rip_update (struct thread *t)
   /* Clear timer pointer. */
   rip->t_update = NULL;
 
+#ifdef FOX_RIP_DEBUG
   if (IS_RIP_DEBUG_EVENT)
     zlog_info ("update timer fire!");
+#endif /* FOX_RIP_DEBUG */
 
   /* Process update output. */
   rip_update_process (rip_all_route);
@@ -2302,9 +2589,11 @@ rip_triggered_update (struct thread *t)
     }
   rip->trigger = 0;
 
+#ifdef FOX_RIP_DEBUG
   /* Logging triggered update. */
   if (IS_RIP_DEBUG_EVENT)
     zlog_info ("triggered update!");
+#endif /* FOX_RIP_DEBUG */
 
   /* Split Horizon processing is done when generating triggered
      updates as well as normal updates (see section 2.6). */
@@ -2459,7 +2748,9 @@ DEFUN (router_rip,
       ret = rip_create ();
       if (ret < 0)
 	{
+#ifdef FOX_RIP_DEBUG
 	  zlog_info ("Can't create RIP");
+#endif /* FOX_RIP_DEBUG */
 	  return CMD_WARNING;
 	}
     }
@@ -2481,6 +2772,7 @@ DEFUN (no_router_rip,
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_CMD_SUPPORT
 DEFUN (rip_version,
        rip_version_cmd,
        "version <1-2>",
@@ -2591,7 +2883,7 @@ DEFUN (no_rip_route,
 
   return CMD_SUCCESS;
 }
-
+#endif /* FOX_CMD_SUPPORT */
 void
 rip_update_default_metric ()
 {
@@ -2879,6 +3171,7 @@ rip_distance_apply (struct rip_info *rinfo)
   return 0;
 }
 
+#ifdef FOX_CMD_SUPPORT
 void
 rip_distance_show (struct vty *vty)
 {
@@ -3179,11 +3472,13 @@ DEFUN (show_ip_protocols_rip,
 
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 /* RIP configuration write function. */
 int
 config_write_rip (struct vty *vty)
 {
+#ifdef FOX_CMD_SUPPORT
   int write = 0;
   struct route_node *rn;
   struct rip_distance *rdistance;
@@ -3223,8 +3518,10 @@ config_write_rip (struct vty *vty)
       /* Redistribute configuration. */
       config_write_rip_redistribute (vty, 1);
 
+#ifdef FOX_LIST_SUPPORT
       /* RIP offset-list configuration. */
       config_write_rip_offset_list (vty);
+#endif /* FOX_LIST_SUPPORT */
 
       /* RIP enabled network and interface configuration. */
       config_write_rip_network (vty, 1);
@@ -3259,6 +3556,7 @@ config_write_rip (struct vty *vty)
 
     }
   return write;
+#endif /* FOX_CMD_SUPPORT */
 }
 
 /* RIP node structure. */
@@ -3311,10 +3609,12 @@ rip_distribute_update (struct distribute *dist)
 
   if (dist->prefix[DISTRIBUTE_IN])
     {
+#ifdef FOX_LIST_SUPPORT
       plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_IN]);
       if (plist)
 	ri->prefix[RIP_FILTER_IN] = plist;
       else
+#endif /* FOX_LIST_SUPPORT */
 	ri->prefix[RIP_FILTER_IN] = NULL;
     }
   else
@@ -3322,10 +3622,12 @@ rip_distribute_update (struct distribute *dist)
 
   if (dist->prefix[DISTRIBUTE_OUT])
     {
+#ifdef FOX_LIST_SUPPORT
       plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_OUT]);
       if (plist)
 	ri->prefix[RIP_FILTER_OUT] = plist;
       else
+#endif /* FOX_LIST_SUPPORT */
 	ri->prefix[RIP_FILTER_OUT] = NULL;
     }
   else
@@ -3437,7 +3739,9 @@ rip_clean ()
 
   rip_clean_network ();
   rip_passive_interface_clean ();
+#ifdef FOX_LIST_SUPPORT
   rip_offset_clean ();
+#endif /* FOX_LIST_SUPPORT */
   rip_interface_clean ();
   rip_distance_reset ();
   rip_redistribute_clean ();
@@ -3452,13 +3756,19 @@ rip_reset ()
   rip_global_queries = 0;
 
   /* Call ripd related reset functions. */
+#ifdef FOX_RIP_DEBUG
   rip_debug_reset ();
+#endif /* FOX_RIP_DEBUG */
+#ifdef FOX_LIST_SUPPORT
   rip_route_map_reset ();
 
   /* Call library reset functions. */
   vty_reset ();
+#endif /* FOX_LIST_SUPPORT */
   access_list_reset ();
+#ifdef FOX_LIST_SUPPORT
   prefix_list_reset ();
+#endif /* FOX_LIST_SUPPORT */
 
   distribute_list_reset ();
 
@@ -3478,16 +3788,22 @@ rip_init ()
   /* Install top nodes. */
   install_node (&rip_node, config_write_rip);
 
+#ifdef FOX_CMD_SUPPORT
   /* Install rip commands. */
   install_element (VIEW_NODE, &show_ip_rip_cmd);
   install_element (VIEW_NODE, &show_ip_protocols_rip_cmd);
   install_element (ENABLE_NODE, &show_ip_rip_cmd);
   install_element (ENABLE_NODE, &show_ip_protocols_rip_cmd);
+#endif /* FOX_CMD_SUPPORT */
   install_element (CONFIG_NODE, &router_rip_cmd);
   install_element (CONFIG_NODE, &no_router_rip_cmd);
 
   install_default (RIP_NODE);
+#ifdef FOX_CMD_SUPPORT
   install_element (RIP_NODE, &rip_version_cmd);
+#endif /* FOX_CMD_SUPPORT */
+
+#ifdef FOX_CMD_SUPPORT
   install_element (RIP_NODE, &no_rip_version_cmd);
   install_element (RIP_NODE, &no_rip_version_val_cmd);
   install_element (RIP_NODE, &rip_default_metric_cmd);
@@ -3503,13 +3819,18 @@ rip_init ()
   install_element (RIP_NODE, &no_rip_distance_source_cmd);
   install_element (RIP_NODE, &rip_distance_source_access_list_cmd);
   install_element (RIP_NODE, &no_rip_distance_source_access_list_cmd);
+#endif /* FOX_CMD_SUPPORT */
 
+#ifdef FOX_RIP_DEBUG
   /* Debug related init. */
   rip_debug_init ();
+#endif /* FOX_RIP_DEBUG */
 
+#ifdef FOX_LIST_SUPPORT
   /* Filter related init. */
   rip_route_map_init ();
   rip_offset_init ();
+#endif /* FOX_RIP_DEBUG */
 
   /* SNMP init. */
 #ifdef HAVE_SNMP
@@ -3521,10 +3842,12 @@ rip_init ()
   access_list_add_hook (rip_distribute_update_all);
   access_list_delete_hook (rip_distribute_update_all);
 
+#ifdef FOX_LIST_SUPPORT
   /* Prefix list initialize.*/
   prefix_list_init ();
   prefix_list_add_hook (rip_distribute_update_all);
   prefix_list_delete_hook (rip_distribute_update_all);
+#endif /* FOX_LIST_SUPPORT */
 
   /* Distribute list install. */
   distribute_list_init (RIP_NODE);
@@ -3533,4 +3856,15 @@ rip_init ()
 
   /* Distance control. */
   rip_distance_table = route_table_init ();
+  
+     /* added start by EricHuang, 11/05/2007 */
+//#ifdef U12H072
+/*  mark start by aspen Bai, 07/17/2008 */
+//#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
+/*  mark end by aspen Bai, 07/17/2008 */
+  fox_get_rtinfo();
+/*  mark start by aspen Bai, 07/17/2008 */
+//#endif
+/*  mark end by aspen Bai, 07/17/2008 */
+     /* added end by EricHuang, 11/05/2007 */
 }

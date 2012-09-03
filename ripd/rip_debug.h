@@ -35,6 +35,7 @@
 #define RIP_DEBUG_ZEBRA   0x01
 
 /* Debug related macro. */
+#ifdef FOX_RIP_DEBUG
 #define IS_RIP_DEBUG_EVENT  (rip_debug_event & RIP_DEBUG_EVENT)
 
 #define IS_RIP_DEBUG_PACKET (rip_debug_packet & RIP_DEBUG_PACKET)
@@ -43,6 +44,16 @@
 #define IS_RIP_DEBUG_DETAIL (rip_debug_packet & RIP_DEBUG_DETAIL)
 
 #define IS_RIP_DEBUG_ZEBRA  (rip_debug_zebra & RIP_DEBUG_ZEBRA)
+
+#else
+#define IS_RIP_DEBUG_PACKET 0
+#define IS_RIP_DEBUG_SEND   0
+#define IS_RIP_DEBUG_RECV   0
+#define IS_RIP_DEBUG_DETAIL 0
+
+#define IS_RIP_DEBUG_ZEBRA  0
+
+#endif /* FOX_RIP_DEBUG */
 
 extern unsigned long rip_debug_event;
 extern unsigned long rip_debug_packet;

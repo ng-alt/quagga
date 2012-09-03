@@ -152,6 +152,7 @@ rip_zclient_reset ()
   zclient_reset (zclient);
 }
 
+#ifdef FOX_LIST_SUPPORT
 /* RIP route-map set for redistribution */
 void
 rip_routemap_set (int type, char *name)
@@ -196,6 +197,8 @@ rip_routemap_unset (int type,char *name)
 
   return 0;
 }
+#endif /* FOX_LIST_SUPPORT */
+
 
 /* Redistribution types */
 static struct {
@@ -211,6 +214,7 @@ static struct {
   {0, 0, NULL}
 };
 
+#ifdef FOX_CMD_SUPPORT
 DEFUN (router_zebra,
        router_zebra_cmd,
        "router zebra",
@@ -234,6 +238,7 @@ DEFUN (no_router_zebra,
   zclient_stop (zclient);
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 int
 rip_redistribute_set (int type)
@@ -249,6 +254,7 @@ rip_redistribute_set (int type)
   return CMD_SUCCESS;
 }
 
+#ifdef FOX_CMD_SUPPORT
 int
 rip_redistribute_unset (int type)
 {
@@ -265,6 +271,7 @@ rip_redistribute_unset (int type)
 
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 int
 rip_redistribute_check (int type)
@@ -293,6 +300,7 @@ rip_redistribute_clean ()
     }
 }
 
+#ifdef FOX_CMD_SUPPORT
 DEFUN (rip_redistribute_rip,
        rip_redistribute_rip_cmd,
        "redistribute rip",
@@ -313,6 +321,7 @@ DEFUN (no_rip_redistribute_rip,
   zclient->redist[ZEBRA_ROUTE_RIP] = 0;
   return CMD_SUCCESS;
 }
+#endif /* FOX_CMD_SUPPORT */
 
 DEFUN (rip_redistribute_type,
        rip_redistribute_type_cmd,
@@ -342,6 +351,7 @@ DEFUN (rip_redistribute_type,
   return CMD_WARNING;
 }
 
+#ifdef FOX_CMD_SUPPORT
 DEFUN (no_rip_redistribute_type,
        no_rip_redistribute_type_cmd,
        "no redistribute (kernel|connected|static|ospf|bgp)",
@@ -360,8 +370,10 @@ DEFUN (no_rip_redistribute_type,
       if (strncmp(redist_type[i].str, argv[0], 
 		  redist_type[i].str_min_len) == 0) 
 	{
+#if defined(FOX_LIST_SUPPORT) 
 	  rip_metric_unset (redist_type[i].type, DONT_CARE_METRIC_RIP);
 	  rip_routemap_unset (redist_type[i].type,NULL);
+#endif /* FOX_LIST_SUPPORT */
 	  rip_redistribute_unset (redist_type[i].type);
 	  return CMD_SUCCESS;
         }
@@ -372,7 +384,9 @@ DEFUN (no_rip_redistribute_type,
 
   return CMD_WARNING;
 }
+#endif /* FOX_LIST_SUPPORT */
 
+#if defined(FOX_LIST_SUPPORT) && defined(FOX_CMD_SUPPORT)
 DEFUN (rip_redistribute_type_routemap,
        rip_redistribute_type_routemap_cmd,
        "redistribute (kernel|connected|static|ospf|bgp) route-map WORD",
@@ -586,11 +600,14 @@ DEFUN (no_rip_default_information_originate,
 
   return CMD_SUCCESS;
 }
+#endif /* FOX_LIST_SUPPORT && FOX_CMD_SUPPORT */
+
 
 /* RIP configuration write function. */
 int
 config_write_zebra (struct vty *vty)
 {
+#ifdef FOX_CMD_SUPPORT
   if (! zclient->enable)
     {
       vty_out (vty, "no router zebra%s", VTY_NEWLINE);
@@ -602,12 +619,14 @@ config_write_zebra (struct vty *vty)
       vty_out (vty, " no redistribute rip%s", VTY_NEWLINE);
       return 1;
     }
+#endif /* FOX_CMD_SUPPORT */
   return 0;
 }
 
 int
 config_write_rip_redistribute (struct vty *vty, int config_mode)
 {
+#ifdef FOX_CMD_SUPPORT
   int i;
   char *str[] = { "system", "kernel", "connected", "static", "rip",
 		  "ripng", "ospf", "ospf6", "bgp"};
@@ -643,6 +662,7 @@ config_write_rip_redistribute (struct vty *vty, int config_mode)
 	else
 	  vty_out (vty, " %s", str[i]);
       }
+#endif /* FOX_CMD_SUPPORT */
   return 0;
 }
 
@@ -671,21 +691,29 @@ rip_zclient_init ()
   /* Install zebra node. */
   install_node (&zebra_node, config_write_zebra);
 
+#if defined(FOX_CMD_SUPPORT) && defined(FOX_LIST_SUPPORT)
   /* Install command elements to zebra node. */ 
   install_element (CONFIG_NODE, &router_zebra_cmd);
   install_element (CONFIG_NODE, &no_router_zebra_cmd);
   install_default (ZEBRA_NODE);
   install_element (ZEBRA_NODE, &rip_redistribute_rip_cmd);
   install_element (ZEBRA_NODE, &no_rip_redistribute_rip_cmd);
+#endif /* FOX_CMD_SUPPORT && FOX_LIST_SUPPORT*/
 
   /* Install command elements to rip node. */
   install_element (RIP_NODE, &rip_redistribute_type_cmd);
+
+#if defined(FOX_CMD_SUPPORT) && defined(FOX_LIST_SUPPORT)
   install_element (RIP_NODE, &rip_redistribute_type_routemap_cmd);
   install_element (RIP_NODE, &rip_redistribute_type_metric_cmd);
   install_element (RIP_NODE, &no_rip_redistribute_type_cmd);
+#endif /* (FOX_CMD_SUPPORT) && defined(FOX_LIST_SUPPORT) */
+
+#if defined(FOX_CMD_SUPPORT) && defined(FOX_LIST_SUPPORT)
   install_element (RIP_NODE, &no_rip_redistribute_type_routemap_cmd);
   install_element (RIP_NODE, &no_rip_redistribute_type_metric_cmd);
   install_element (RIP_NODE, &no_rip_redistribute_type_metric_routemap_cmd);
   install_element (RIP_NODE, &rip_default_information_originate_cmd);
   install_element (RIP_NODE, &no_rip_default_information_originate_cmd);
+#endif /* (FOX_CMD_SUPPORT) && defined(FOX_LIST_SUPPORT) */
 }

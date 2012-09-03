@@ -61,6 +61,7 @@ timeval_elapsed (struct timeval a, struct timeval b)
 	  + (a.tv_usec - b.tv_usec));
 }
 
+#ifdef FOX_RIP_DEBUG
 /* List allocation and head/tail print out. */
 static void
 thread_list_debug (struct thread_list *list)
@@ -87,6 +88,7 @@ thread_master_debug (struct thread_master *m)
   printf ("total alloc: [%ld]\n", m->alloc);
   printf ("-----------\n");
 }
+#endif /* #ifdef FOX_RIP_DEBUG */
 
 /* Allocate new thread master.  */
 struct thread_master *
@@ -247,7 +249,9 @@ thread_add_read (struct thread_master *m,
 
   if (FD_ISSET (fd, &m->readfd))
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "There is already read fd [%d]", fd);
+#endif /* FOX_RIP_DEBUG */
       return NULL;
     }
 
@@ -270,7 +274,9 @@ thread_add_write (struct thread_master *m,
 
   if (FD_ISSET (fd, &m->writefd))
     {
+#ifdef FOX_RIP_DEBUG
       zlog (NULL, LOG_WARNING, "There is already write fd [%d]", fd);
+#endif
       return NULL;
     }
 
@@ -544,8 +550,9 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
 	{
 	  if (errno == EINTR)
 	    continue;
-
+#ifdef FOX_RIP_DEBUG
 	  zlog_warn ("select() error: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
 	  return NULL;
 	}
 
@@ -617,10 +624,12 @@ thread_call (struct thread *thread)
        * Whinge about it now, so we're aware this is yet another task
        * to fix.
        */
+#ifdef FOX_RIP_DEBUG
       zlog_err ("CPU HOG task %lx ran for %ldms",
                 /* FIXME: report the name of the function somehow */
 		(unsigned long) thread->func,
 		thread_time / 1000L);
+#endif /* FOX_RIP_DEBUG */
     }
 #endif /* THREAD_CONSUMED_TIME_CHECK */
 }

@@ -99,6 +99,7 @@ if_ioctl_ipv6 (u_long request, caddr_t buffer)
 }
 #endif /* HAVE_IPV6 */
 
+#ifdef FOX_CMD_SUPPORT
 /*
  * get interface metric
  *   -- if value is not avaliable set -1
@@ -132,7 +133,9 @@ if_get_mtu (struct interface *ifp)
 #if defined(SIOCGIFMTU)
   if (if_ioctl (SIOCGIFMTU, (caddr_t) & ifreq) < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("Can't lookup mtu by ioctl(SIOCGIFMTU)");
+#endif /* FOX_RIP_DEBUG */
       ifp->mtu = -1;
       return;
     }
@@ -144,10 +147,13 @@ if_get_mtu (struct interface *ifp)
 #endif /* SUNOS_5 */
 
 #else
+#ifdef FOX_RIP_DEBUG
   zlog (NULL, LOG_INFO, "Can't lookup mtu on this system");
+#endif /* FOX_RIP_DEBUG */
   ifp->mtu = -1;
 #endif
 }
+#endif /* FOX_CMD_SUPPORT */
 
 #ifdef HAVE_NETLINK
 /* Interface address setting via netlink interface. */
@@ -358,7 +364,9 @@ if_set_flags (struct interface *ifp, unsigned long flags)
 
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("can't set interface flags");
+#endif /* FOX_RIP_DEBUG */
       return ret;
     }
   return 0;
@@ -380,7 +388,9 @@ if_unset_flags (struct interface *ifp, unsigned long flags)
 
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_info ("can't unset interface flags");
+#endif /* FOX_RIP_DEBUG */
       return ret;
     }
   return 0;

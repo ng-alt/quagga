@@ -1313,8 +1313,10 @@ zebra_client_read (struct thread *thread)
   nbyte = stream_read (client->ibuf, sock, 3);
   if (nbyte <= 0) 
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_EVENT)
 	zlog_info ("connection closed socket [%d]", sock);
+#endif /* FOX_RIP_DEBUG */
       zebra_client_close (client);
       return -1;
     }
@@ -1323,8 +1325,10 @@ zebra_client_read (struct thread *thread)
 
   if (length < 3) 
     {
+#ifdef FOX_RIP_DEBUG
       if (IS_ZEBRA_DEBUG_EVENT)
 	zlog_info ("length %d is less than 3 ", length);
+#endif /* FOX_RIP_DEBUG */
       zebra_client_close (client);
       return -1;
     }
@@ -1337,13 +1341,15 @@ zebra_client_read (struct thread *thread)
       nbyte = stream_read (client->ibuf, sock, length);
       if (nbyte <= 0) 
 	{
+#ifdef FOX_RIP_DEBUG
 	  if (IS_ZEBRA_DEBUG_EVENT)
 	    zlog_info ("connection closed [%d] when reading zebra data", sock);
+#endif /* FOX_RIP_DEBUG */
 	  zebra_client_close (client);
 	  return -1;
 	}
     }
-
+#ifdef FOX_RIP_DEBUG
   /* Debug packet information. */
   if (IS_ZEBRA_DEBUG_EVENT)
     zlog_info ("zebra message comes from socket [%d]", sock);
@@ -1351,7 +1357,7 @@ zebra_client_read (struct thread *thread)
   if (IS_ZEBRA_DEBUG_PACKET && IS_ZEBRA_DEBUG_RECV)
     zlog_info ("zebra message received [%s] %d", 
 	       zebra_command_str[command], length);
-
+#endif /* FOX_RIP_DEBUG */
   switch (command) 
     {
     case ZEBRA_INTERFACE_ADD:
@@ -1398,7 +1404,9 @@ zebra_client_read (struct thread *thread)
       zread_ipv4_import_lookup (client, length);
       break;
     default:
+#ifdef FOX_RIP_DEBUG
       zlog_info ("Zebra received unknown command %d", command);
+#endif /* FOX_RIP_DEBUG */
       break;
     }
 
@@ -1439,7 +1447,9 @@ zebra_accept (struct thread *thread)
 
   if (client_sock < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't accept zebra socket: %s", strerror (errno));
+#endif /* FOX_RIP_DEBUG */
       return -1;
     }
 
@@ -1464,8 +1474,10 @@ zebra_serv ()
 
   if (accept_sock < 0) 
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't bind to socket: %s", strerror (errno));
       zlog_warn ("zebra can't provice full functionality due to above error");
+#endif /* FOX_RIP_DEBUG */
       return;
     }
 
@@ -1484,8 +1496,10 @@ zebra_serv ()
 	       sizeof (struct sockaddr_in));
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't bind to socket: %s", strerror (errno));
       zlog_warn ("zebra can't provice full functionality due to above error");
+#endif /* FOX_RIP_DEBUG */
       close (accept_sock);      /* Avoid sd leak. */
       return;
     }
@@ -1493,8 +1507,10 @@ zebra_serv ()
   ret = listen (accept_sock, 1);
   if (ret < 0)
     {
+#ifdef FOX_RIP_DEBUG
       zlog_warn ("Can't listen to socket: %s", strerror (errno));
       zlog_warn ("zebra can't provice full functionality due to above error");
+#endif /* FOX_RIP_DEBUG */
       close (accept_sock);	/* Avoid sd leak. */
       return;
     }
@@ -1580,6 +1596,8 @@ zebra_event (enum event event, int sock, struct zserv *client)
     }
 }
 
+
+#ifdef FOX_CMD_SUPPORT
 /* Display default rtm_table for all clients. */
 DEFUN (show_table,
        show_table_cmd,
@@ -1587,9 +1605,11 @@ DEFUN (show_table,
        SHOW_STR
        "default routing table to use for all clients\n")
 {
+#ifdef FOX_CMD_SUPPORT
   vty_out (vty, "table %d%s", rtm_table_default,
 	   VTY_NEWLINE);
   return CMD_SUCCESS;
+#endif /* FOX_CMD_SUPPORT */
 }
 
 DEFUN (config_table, 
@@ -1613,6 +1633,7 @@ DEFUN (no_ip_forwarding,
 
   ret = ipforward ();
 
+#ifdef FOX_CMD_SUPPORT
   if (ret == 0)
     {
       vty_out (vty, "IP forwarding is already off%s", VTY_NEWLINE); 
@@ -1625,7 +1646,7 @@ DEFUN (no_ip_forwarding,
       vty_out (vty, "Can't turn off IP forwarding%s", VTY_NEWLINE);
       return CMD_WARNING;
     }
-
+#endif /* FOX_CMD_SUPPORT */
   return CMD_SUCCESS;
 }
 
@@ -1647,14 +1668,17 @@ DEFUN (show_zebra_client,
     }
   return CMD_SUCCESS;
 }
-
+#endif /* FOX_CMD_SUPPORT */
 /* Table configuration write function. */
 int
 config_write_table (struct vty *vty)
 {
+
+#ifdef FOX_CMD_SUPPORT
   if (rtm_table_default)
     vty_out (vty, "table %d%s", rtm_table_default,
 	     VTY_NEWLINE);
+ #endif /* FOX_CMD_SUPPORT */
   return 0;
 }
 
@@ -1665,7 +1689,7 @@ struct cmd_node table_node =
   "",				/* This node has no interface. */
   1
 };
-
+#ifdef FOX_CMD_SUPPORT
 /* Only display ip forwarding is enabled or not. */
 DEFUN (show_ip_forwarding,
        show_ip_forwarding_cmd,
@@ -1736,11 +1760,12 @@ DEFUN (no_ipv6_forwarding,
 }
 
 #endif /* HAVE_IPV6 */
-
+#endif /* FOX_CMD_SUPPORT */
 /* IPForwarding configuration write function. */
 int
 config_write_forwarding (struct vty *vty)
 {
+#ifdef FOX_CMD_SUPPORT
   if (! ipforward ())
     vty_out (vty, "no ip forwarding%s", VTY_NEWLINE);
 #ifdef HAVE_IPV6
@@ -1748,6 +1773,7 @@ config_write_forwarding (struct vty *vty)
     vty_out (vty, "no ipv6 forwarding%s", VTY_NEWLINE);
 #endif /* HAVE_IPV6 */
   vty_out (vty, "!%s", VTY_NEWLINE);
+#endif /* FOX_CMD_SUPPORT */
   return 0;
 }
 
@@ -1783,7 +1809,7 @@ zebra_init ()
   /* Install configuration write function. */
   install_node (&table_node, config_write_table);
   install_node (&forwarding_node, config_write_forwarding);
-
+#ifdef FOX_CMD_SUPPORT
   install_element (VIEW_NODE, &show_ip_forwarding_cmd);
   install_element (ENABLE_NODE, &show_ip_forwarding_cmd);
   install_element (CONFIG_NODE, &no_ip_forwarding_cmd);
@@ -1800,4 +1826,5 @@ zebra_init ()
   install_element (ENABLE_NODE, &show_ipv6_forwarding_cmd);
   install_element (CONFIG_NODE, &no_ipv6_forwarding_cmd);
 #endif /* HAVE_IPV6 */
+#endif  /* FOX_CMD_SUPPORT */
 }

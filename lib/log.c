@@ -27,6 +27,8 @@
 
 struct zlog *zlog_default = NULL;
 
+#ifdef FOX_RIP_DEBUG
+
 const char *zlog_proto_names[] = 
 {
   "NONE",
@@ -40,6 +42,7 @@ const char *zlog_proto_names[] =
   "MASC",
   NULL,
 };
+#endif /* FOX_RIP_DEBUG */
 
 const char *zlog_priority[] =
 {
@@ -54,7 +57,7 @@ const char *zlog_priority[] =
   NULL,
 };
   
-
+#ifdef FOX_RIP_DEBUG
 
 /* For time string format. */
 #define TIME_BUF 27
@@ -455,6 +458,7 @@ zlog_free_cwd ()
   if (zlog_cwd)
     XFREE (MTYPE_TMP, zlog_cwd);
 }
+#endif /* FOX_RIP_DEBUG */
 
 /* Message lookup function. */
 char *
@@ -469,6 +473,7 @@ lookup (struct message *mes, int key)
   return "";
 }
 
+#ifdef FOX_RIP_DEBUG
 /* Very old hacky version of message lookup function.  Still partly
    used in bgpd and ospfd. */
 char *
@@ -481,3 +486,5 @@ mes_lookup (struct message *meslist, int max, int index)
     }
   return meslist[index].str;
 }
+
+#endif /* FOX_RIP_DEBUG */

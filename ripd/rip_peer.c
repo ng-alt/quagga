@@ -18,7 +18,7 @@
  * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
-
+#ifdef FOX_RIP_DEBUG
 #include <zebra.h>
 
 #include "if.h"
@@ -209,3 +209,4 @@ rip_peer_init ()
   peer_list = list_new ();
   peer_list->cmp = (int (*)(void *, void *)) rip_peer_list_cmp;
 }
+#endif /* FOX_RIP_DEBUG */
