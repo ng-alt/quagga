@@ -96,11 +96,11 @@ struct
   { ZEBRA_ROUTE_BGP,     "B", "bgp"}
 };
 
-/*  added start by EricHuang, 11/05/2007 */
+/* foxconn added start by EricHuang, 11/05/2007 */
 //#ifdef U12H072
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
-/*  mark end by aspen Bai, 07/17/2008 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
 #define max_fox_rt_info     32
 
 struct fox_rt_info {
@@ -174,10 +174,10 @@ void fox_get_rtinfo()
     if (fp)
         fclose(fp);
 }
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#endif
-/*  mark end by aspen Bai, 07/17/2008 */
-/*  added end by EricHuang, 11/05/2007 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
+/* foxconn added end by EricHuang, 11/05/2007 */
 
 
 /* Utility function to set boradcast option to the socket. */
@@ -1356,12 +1356,12 @@ rip_send_packet (caddr_t buf, int size, struct sockaddr_in *to,
       rip_interface_multicast_set (sock, ifp);
     }
 
-  /*  wklin added start, 04/14/2007 */
+  /* foxconn wklin added start, 04/14/2007 */
   {
     int ttl = 1;
     setsockopt (sock, IPPROTO_IP, IP_TTL, (void *) &ttl, sizeof (int));
   }
-  /*  wklin added end, 04/14/2007 */
+  /* foxconn wklin added end, 04/14/2007 */
   ret = sendto (sock, buf, size, 0, (struct sockaddr *)&sin,
 		sizeof (struct sockaddr_in));
 
@@ -2035,14 +2035,14 @@ rip_write_rte (int num, struct stream *s, struct prefix_ipv4 *p,
   struct in_addr mask;
   struct rip_interface *ri;
   
-     /*  added start by EricHuang, 11/07/2007 */
+     /* foxconn added start by EricHuang, 11/07/2007 */
 //#ifdef U12H072
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
   int i=0;
 //#endif
-/*  mark end by aspen Bai, 07/17/2008 */
-    /*  added end by EricHuang, 11/07/2007 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
+    /* foxconn added end by EricHuang, 11/07/2007 */
 
   /* RIP packet header. */
   if (num == 0)
@@ -2099,12 +2099,12 @@ rip_write_rte (int num, struct stream *s, struct prefix_ipv4 *p,
 #endif /* FOX_AUTH_SUPPORT */
     }
 
-    /*  added start by EricHuang, 11/07/2007 */
+    /* foxconn added start by EricHuang, 11/07/2007 */
     /* replace metric value here */
 //#ifdef U12H072
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
-/*  mark end by aspen Bai, 07/17/2008 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
     for (i=0; i<max_fox_rt_info; i++)
     {
         if ( IPV4_ADDR_SAME (&p->prefix, &fox_rt_info_table[i].prefix) )
@@ -2119,10 +2119,10 @@ rip_write_rte (int num, struct stream *s, struct prefix_ipv4 *p,
             break;
         }
     }
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#endif
-/*  mark end by aspen Bai, 07/17/2008 */
-    /*  added end by EricHuang, 11/07/2007 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
+    /* foxconn added end by EricHuang, 11/07/2007 */
 
   /* Write routing table entry. */
   if (version == RIPv1)
@@ -3857,14 +3857,14 @@ rip_init ()
   /* Distance control. */
   rip_distance_table = route_table_init ();
   
-     /* added start by EricHuang, 11/05/2007 */
+     /*foxconn added start by EricHuang, 11/05/2007 */
 //#ifdef U12H072
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#if (defined(U12H072) || defined(U12H083) || defined(U12H081))
-/*  mark end by aspen Bai, 07/17/2008 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
   fox_get_rtinfo();
-/*  mark start by aspen Bai, 07/17/2008 */
+/* Foxconn mark start by aspen Bai, 07/17/2008 */
 //#endif
-/*  mark end by aspen Bai, 07/17/2008 */
-     /* added end by EricHuang, 11/05/2007 */
+/* Foxconn mark end by aspen Bai, 07/17/2008 */
+     /*foxconn added end by EricHuang, 11/05/2007 */
 }

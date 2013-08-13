@@ -295,7 +295,7 @@ if_is_pointopoint (struct interface *ifp)
 int
 if_is_multicast (struct interface *ifp)
 {
-/*  add by fred 20060221 */
+/* Foxconn add by fred 20060221 */
 // Use M.conf file instead of multicast flag //
 // M.conf create from rc/service.c //
   FILE *fp;
@@ -303,7 +303,7 @@ if_is_multicast (struct interface *ifp)
 	return 0;
   else
   	fclose(fp);
-/*  end */
+/* Foxconn end */
   return ifp->flags & IFF_MULTICAST;
 }
 

@@ -270,9 +270,9 @@ rip_request_interface (struct interface *ifp)
      use rip's version setting. */
   if (ri->ri_send == RI_RIP_UNSPEC)
     {
-        /* add start, water, 01/14/2008*/
+        /*foxconn add start, water, 01/14/2008*/
         return;
-        /* add end, water, 01/14/2008*/
+        /*foxconn add end, water, 01/14/2008*/
       if (rip->version == RIPv1)
 	rip_request_interface_send (ifp, RIPv1);
       else
