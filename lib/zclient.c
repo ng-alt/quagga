@@ -212,7 +212,7 @@ zebra_message_send (struct zclient *zclient, int command)
   stream_putw (s, 3);
   stream_putc (s, command);
 
-  return writen (zclient->sock, s->data, 3);
+  return writen (zclient->sock, (char *)(s->data), 3);
 }
 
 /* Make connection to zebra daemon. */
@@ -347,7 +347,7 @@ zapi_ipv4_add (struct zclient *zclient, struct prefix_ipv4 *p,
   /* Put length at the first point of the stream. */
   stream_putw_at (s, 0, stream_get_endp (s));
 
-  return writen (zclient->sock, s->data, stream_get_endp (s));
+  return writen (zclient->sock, (char *)(s->data), stream_get_endp (s));
 }
 
 int
@@ -401,7 +401,7 @@ zapi_ipv4_delete (struct zclient *zclient, struct prefix_ipv4 *p,
   /* Put length at the first point of the stream. */
   stream_putw_at (s, 0, stream_get_endp (s));
 
-  return writen (zclient->sock, s->data, stream_get_endp (s));
+  return writen (zclient->sock, (char *)(s->data), stream_get_endp (s));
 }
 
 #ifdef HAVE_IPV6
@@ -456,7 +456,7 @@ zapi_ipv6_add (struct zclient *zclient, struct prefix_ipv6 *p,
   /* Put length at the first point of the stream. */
   stream_putw_at (s, 0, stream_get_endp (s));
 
-  return writen (zclient->sock, s->data, stream_get_endp (s));
+  return writen (zclient->sock, (char *)(s->data), stream_get_endp (s));
 }
 
 int
@@ -510,7 +510,7 @@ zapi_ipv6_delete (struct zclient *zclient, struct prefix_ipv6 *p,
   /* Put length at the first point of the stream. */
   stream_putw_at (s, 0, stream_get_endp (s));
 
-  return writen (zclient->sock, s->data, stream_get_endp (s));
+  return writen (zclient->sock, (char *)(s->data), stream_get_endp (s));
 }
 
 #endif /* HAVE_IPV6 */
@@ -529,7 +529,7 @@ zebra_redistribute_send (int command, int sock, int type)
   stream_putc (s, command);
   stream_putc (s, type);
 
-  ret = writen (sock, s->data, 4);
+  ret = writen (sock, (char *)(s->data), 4);
 
   stream_free (s);
 
@@ -547,13 +547,13 @@ zebra_interface_add_read (struct stream *s)
   stream_get (ifname_tmp, s, INTERFACE_NAMSIZ);
 
   /* Lookup this by interface name. */
-  ifp = if_lookup_by_name (ifname_tmp);
+  ifp = if_lookup_by_name ((char *)ifname_tmp);
 
   /* If such interface does not exist, make new one. */
   if (! ifp)
     {
       ifp = if_create ();
-      strncpy (ifp->name, ifname_tmp, IFNAMSIZ);
+      strncpy (ifp->name, (char *)ifname_tmp, IFNAMSIZ);
     }
 
   /* Read interface's index. */
@@ -586,7 +586,7 @@ zebra_interface_state_read (struct stream *s)
   stream_get (ifname_tmp, s, INTERFACE_NAMSIZ);
 
   /* Lookup this by interface index. */
-  ifp = if_lookup_by_name (ifname_tmp);
+  ifp = if_lookup_by_name ((char *)ifname_tmp);
 
   /* If such interface does not exist, indicate an error */
   if (! ifp)

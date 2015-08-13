@@ -194,6 +194,8 @@ if_lookup_address (struct in_addr src)
   struct prefix *p;
   struct connected *c;
   struct interface *match;
+  //brcm
+  struct prefix_ipv4 *psrc;
 
   /* Zero structures - get rid of rubbish from stack */
   memset(&addr, 0, sizeof(addr));
@@ -216,18 +218,33 @@ if_lookup_address (struct in_addr src)
 	  if (if_is_pointopoint (ifp))
 	    {
 	      p = c->address;
-
-	      if (p && p->family == AF_INET)
-		{
+	      
+	      //brcm -- src and destination are the same, it's ipoa, send broadcast instead
+	      psrc = (struct prefix_ipv4 *) c->destination;
+	      if (IPV4_ADDR_SAME(&((struct prefix_ipv4 *)p)->prefix, &psrc->prefix)) {
+		/* check prefix only */
+		if (p->family == AF_INET)
+		  {
+		    if (prefix_match (p, &addr) && p->prefixlen > best.prefixlen)
+		      {
+			best = *p;
+			match = ifp;
+		      }
+		  }
+	      } 
+	      else { //brcm
+		if (p && p->family == AF_INET)
+		  {
 #ifdef OLD_RIB	 /* PTP  links are conventionally identified 
-		     by the address of the far end - MAG */
-		  if (IPV4_ADDR_SAME (&p->u.prefix4, &src))
-		    return ifp;
+		    by the address of the far end - MAG */
+                    if (IPV4_ADDR_SAME (&p->u.prefix4, &src))
+		         return ifp;
 #endif
 		  p = c->destination;
 		  if (p && IPV4_ADDR_SAME (&p->u.prefix4, &src))
 		    return ifp;
-		}
+		 }
+	      }
 	    }
 	  else
 	    {

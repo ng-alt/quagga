@@ -452,6 +452,8 @@ if_valid_neighbor (struct in_addr addr)
   listnode node;
   struct connected *connected = NULL;
   struct prefix_ipv4 *p;
+  //brcm
+  struct prefix_ipv4 *src;
 
   for (node = listhead (iflist); node; nextnode (node))
     {
@@ -470,6 +472,18 @@ if_valid_neighbor (struct in_addr addr)
 	  if (if_is_pointopoint (ifp))
 	    {
 	      p = (struct prefix_ipv4 *) connected->address;
+
+	      //brcm -- src and destination are the same, it's ipoa, 
+	      src = (struct prefix_ipv4 *) connected->destination;
+	      if (IPV4_ADDR_SAME(&p->prefix, &src->prefix)) {
+#ifdef BRCM_RIP_DEBUG
+		if (IS_RIP_DEBUG_EVENT)
+		  zlog_info ("valid_neigh():ifc->name %s, ptop->src %s, dest %s; do broadcast later",
+			     ifp->name,inet_ntoa(p->prefix),inet_ntoa(src->prefix));
+#endif
+		return 1;
+	      }
+	      //brcm
 
 	      if (p && p->family == AF_INET)
 		{

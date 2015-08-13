@@ -2384,6 +2384,9 @@ rip_update_interface (struct interface *ifp, u_char version, int route_type)
   listnode node;
   struct sockaddr_in to;
 
+  //brcm
+  struct prefix_ipv4 *src;
+
   /* When RIP version is 2 and multicast enable interface. */
   if (version == RIPv2 && if_is_multicast (ifp)) 
     {
@@ -2406,6 +2409,19 @@ rip_update_interface (struct interface *ifp, u_char version, int route_type)
              address . */
 	  p = (struct prefix_ipv4 *) connected->destination;
 
+	  //brcm -- src and destination are the same, it's ipoa, send broadcast instead
+	  src = (struct prefix_ipv4 *) connected->address;
+
+	  if (IPV4_ADDR_SAME(&p->prefix, &src->prefix)) {
+#ifdef BRCM_RIP_DEBUG
+	    if (IS_RIP_DEBUG_EVENT)
+	      zlog_info ("update_intf():ifc->name %s, ptop->src %s, dest %s; do broadcast later",
+			 ifp->name,inet_ntoa(p->prefix),inet_ntoa(src->prefix));
+#endif
+	    continue;
+	  }
+	  //brcm
+
 	  if (p->family == AF_INET)
 	    {
 	      /* Destination address and port setting. */
@@ -2419,8 +2435,28 @@ rip_update_interface (struct interface *ifp, u_char version, int route_type)
 			   inet_ntoa (to.sin_addr), ifp->name);
 #endif /* FOX_RIP_DEBUG */
 	      rip_output_process (ifp, &to, route_type, version);
+	      //brcm
+	      return;
 	    }
 	}
+    }
+
+  //brcm (ptop IPoA doesn't have remote IP addr), we send broadcast (255.255.255.255)
+  if (version == RIPv1 && if_is_pointopoint(ifp)) 
+    {
+#ifdef BRCM_RIP_DEBUG
+      if (IS_RIP_DEBUG_EVENT)
+	zlog_info ("broadcast announce on %s ", ifp->name);
+#endif
+      memset (&to, 0, sizeof (struct sockaddr_in));
+      to.sin_addr.s_addr = htonl(0xffffffff);
+      to.sin_port = htons (RIP_PORT_DEFAULT);
+#ifdef BRCM_RIP_DEBUG
+      if (IS_RIP_DEBUG_EVENT)
+	zlog_info ("%s announce to %s on %s",
+		   "broadcast", inet_ntoa (to.sin_addr), ifp->name);
+#endif
+      rip_output_process (ifp, &to, route_type, version);
     }
 }
 

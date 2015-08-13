@@ -2193,7 +2193,7 @@ vty_read_config (char *config_file,
 {
   char *cwd;
   FILE *confp = NULL;
-  char *fullpath;
+  char *fullpath = NULL;
 
   /* If -f flag specified. */
   if (config_file != NULL)
